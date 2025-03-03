@@ -1,8 +1,10 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import pool from '../config/db';
 import { sign } from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import { users } from '../db/schema';
+import { eq } from 'drizzle-orm';
+import { DB } from '../db/db.connection';
 dotenv.config();
 
 passport.use(
@@ -17,18 +19,14 @@ passport.use(
         const email = profile.emails?.[0].value??"";
         const name = profile.displayName;
 
-        let user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-
-        if (user.rows.length === 0) {
-          user = await pool.query(
-            "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *",
-            [name, email]
-          );
+          let user = await DB.select().from(users).where(eq(users.email,email)); 
+        if (user.length === 0) {
+           throw new Error("User not found");
+          return;
         }
 
-        const token = sign({ id: user.rows[0].id, email }, process.env.JWT_SECRET||"my_secret", { expiresIn: "1h" });
-
-        return done(null, { user: user.rows[0], token });
+        const token = sign({ id: user[0].id, email }, process.env.JWT_SECRET||"my_secret", { expiresIn: "1h" });
+        return done(null, { user: user[0], token });
       } catch (err) {
         return done(err, false);
       }
