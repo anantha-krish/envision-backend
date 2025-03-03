@@ -1,9 +1,10 @@
-const { Kafka, Partitioners, logLevel } = require('kafkajs');
-require('dotenv').config();
+import { Kafka, Partitioners, logLevel } from 'kafkajs';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const kafka = new Kafka({
   clientId: "user-service",
-  brokers: [process.env.KAFKA_BROKER],
+  brokers: [process.env.KAFKA_BROKER||'localhost:9092'],
   logLevel: logLevel.ERROR
 });
 
@@ -13,7 +14,7 @@ const producer = kafka.producer({
 producer.on('producer.connect', () => {
   console.log('Kafka producer connected');
 });
-const sendUserEvent = async (event, data) => {
+const sendKafkaUserEvent = async (event: string, data: object) => {
   await producer.connect();
   await producer.send({
     topic: "user-events",
@@ -22,4 +23,4 @@ const sendUserEvent = async (event, data) => {
   await producer.disconnect();
 };
 
-module.exports= { sendUserEvent };
+export { sendKafkaUserEvent };
