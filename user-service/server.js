@@ -11,7 +11,7 @@ async function test(){
 }
 
 test();
-/**
+
  app.use(express.json());
 app.use('/', userRoutes);
 
@@ -24,5 +24,5 @@ app.get(
     res.json({ user: req.user.user, token: req.user.token });
   }
 );
-**/
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  user_db_server:
+    image: postgres:17
+    container_name: user_db_server
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: user_db
+      POSTGRES_PASSWORD: user_db_password
+      POSTGRES_DB: user_service
+    ports:
+      - "5433:5432"
+    volumes:
+      - user_db_server_data:/var/lib/postgresql/data
+
+  idea_db_server:
+    image: postgres:17.0
+    container_name: idea_db_server
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: idea_db
+      POSTGRES_PASSWORD: idea_db_password
+      POSTGRES_DB: idea_service
+    ports:
+      - "5434:5432"
+    volumes:
+      - idea_db_server_data:/var/lib/postgresql/data
+
+
+volumes:
+  user_db_server_data:
+    driver: local
+  idea_db_server_data:
+    driver: local
