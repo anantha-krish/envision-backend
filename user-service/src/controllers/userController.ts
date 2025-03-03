@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 
 // Create User
 const createUser = async (req:Request, res:Response) => {
-  const { userName, email, password } = req.body;
+  const { userName, email, password,role } = req.body;
 
   try {
     const hashedPassword = await hash(password, 10);
