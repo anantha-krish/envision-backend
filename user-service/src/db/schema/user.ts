@@ -10,6 +10,7 @@ export const userRoles = pgEnum("user_role", [
   "admin",
 ]);
 
+export type Roles = "user" | "poc_team" | "manager" | "approver" | "admin";
 // Users Table
 export const users = pgTable("users", {
   id: uuid("id")

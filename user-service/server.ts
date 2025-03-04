@@ -15,7 +15,7 @@ test();
 
 app.use(express.json());
 app.use("/", userRoutes);
-
+/*
 app.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
@@ -33,7 +33,7 @@ app.get(
     res.json({ user, token });
   }
 );
-
+*/
 app.listen(SERVER_PORT, () =>
   console.log(`Server running on port ${SERVER_PORT}`)
 );

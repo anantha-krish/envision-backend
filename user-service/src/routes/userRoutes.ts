@@ -1,17 +1,19 @@
 import { Router } from "express";
-import { authenticateUser } from "../middleware/auth";
+
 import {
   createUser,
   getUsers,
   updateUser,
   loginUser,
 } from "../controllers/userController";
+import { authenticateJwt } from "../middleware/authenticate";
+import { authorizeRoles } from "../middleware/authorize";
 
 const router = Router();
 
 router.post("/", createUser);
-router.get("/", authenticateUser, getUsers);
-router.put("/:id", authenticateUser, updateUser);
+router.get("/", authenticateJwt, authorizeRoles("manager", "admin"), getUsers);
+router.put("/:id", authenticateJwt, updateUser);
 router.post("/login", loginUser);
 
 export default router;

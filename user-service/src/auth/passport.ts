@@ -1,43 +1,48 @@
-import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { sign } from 'jsonwebtoken';
-import dotenv from 'dotenv';
-import { users } from '../db/schema';
-import { eq } from 'drizzle-orm';
-import { DB } from '../db/db.connection';
+import dotenv from "dotenv";
+import { eq } from "drizzle-orm";
+import { sign } from "jsonwebtoken";
+import passport from "passport";
+import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
+import { JWT_SECRET } from "../config";
+import { DB } from "../db/db.connection";
+import { users } from "../db/schema";
 dotenv.config();
 
+var opts = {
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  secretOrKey: JWT_SECRET,
+};
+
 passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID||'',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET||'',
-      callbackURL: "/auth/google/callback",
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        const email = profile.emails?.[0].value??"";
-        const name = profile.displayName;
+  new JwtStrategy(opts, async (jwt_payload, done) => {
+    try {
+      let user = await DB.query.users.findFirst({
+        columns: {
+          id: true,
+          email: true,
+          username: true,
+          role: true,
+        },
+        where: eq(users.id, jwt_payload.user_id),
+      });
 
-          let user = await DB.select().from(users).where(eq(users.email,email)); 
-        if (user.length === 0) {
-           throw new Error("User not found");
-          return;
-        }
-
-        const token = sign({ id: user[0].id, email }, process.env.JWT_SECRET||"my_secret", { expiresIn: "1h" });
-        return done(null, { user: user[0], token });
-      } catch (err) {
-        return done(err, false);
+      if (!user) {
+        throw new Error("User not found");
+        return;
       }
+
+      const token = sign(
+        { id: user.id, email: user.email },
+        process.env.JWT_SECRET || "my_secret",
+        { expiresIn: "1h" }
+      );
+      var payload = {
+        user,
+        token,
+      };
+      return done(null, payload);
+    } catch (err) {
+      return done(err, false);
     }
-  )
+  })
 );
-
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-
-passport.deserializeUser((user:Express.User, done) => {
-  done(null, user);
-});

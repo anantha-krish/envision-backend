@@ -1,7 +1,7 @@
 import { eq, SQL } from "drizzle-orm";
 import { PgEnum } from "drizzle-orm/pg-core";
 import { DB } from "../db/db.connection";
-import { users } from "../db/schema";
+import { Roles, users } from "../db/schema";
 
 class UserRepository {
   // Fetch All Users
@@ -24,7 +24,7 @@ class UserRepository {
     username: string,
     email: string,
     password: string,
-    role: SQL<PgEnum<[string, ...string[]]>>
+    role: Roles
   ) {
     return DB.insert(users)
       .values({ username, email, password, role })
