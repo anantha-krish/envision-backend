@@ -15,7 +15,7 @@ class UserRepository {
   }
 
   // Get User by ID
-  async getUserById(id: string) {
+  async getUserById(id: number) {
     return DB.select().from(users).where(eq(users.id, id));
   }
 
@@ -32,11 +32,11 @@ class UserRepository {
   }
 
   // Delete User
-  async deleteUser(id: string) {
+  async deleteUser(id: number) {
     return DB.delete(users).where(eq(users.id, id));
   }
 
-  async updateUser(username: string, email: string, id: string) {
+  async updateUser(username: string, email: string, id: number) {
     return await DB.update(users)
       .set({
         username,

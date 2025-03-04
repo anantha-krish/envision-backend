@@ -12,8 +12,7 @@ export const authenticateJwt = (
     function (err: Error, payload: any) {
       if (err || !payload)
         return res.status(401).json({ message: "Unauthorized" });
-      req.user = payload.user;
-      (req as any).token = payload.token;
+      req.user = payload;
       next();
     }
   )(req, res, next);

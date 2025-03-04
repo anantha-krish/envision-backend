@@ -47,7 +47,7 @@ const updateUser = async (req: Request, res: Response) => {
   const { username, email } = req.body;
 
   try {
-    const result = await userRepo.updateUser(username, email, id);
+    const result = await userRepo.updateUser(username, email, parseInt(id));
 
     await sendKafkaUserEvent("USER_UPDATED", result[0]);
 

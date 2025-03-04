@@ -11,7 +11,7 @@ import { users } from "./user";
 
 export const refreshTokens = pgTable("refresh_tokens", {
   id: serial("id").primaryKey(),
-  userId: uuid("user_id")
+  userId: serial("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   token: text("token").notNull().unique(),

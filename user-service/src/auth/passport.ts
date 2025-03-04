@@ -30,13 +30,7 @@ passport.use(
         throw new Error("User not found");
         return;
       }
-      const token = sign({ sub: user.id }, JWT_SECRET, { expiresIn: "1h" });
-
-      const payload = {
-        user,
-        token,
-      };
-      return done(null, payload);
+      return done(null, user);
     } catch (err) {
       return done(err, false);
     }

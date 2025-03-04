@@ -2,7 +2,7 @@ import { DB } from "../db/db.connection"; // Your Drizzle DB instance
 import { refreshTokens } from "../db/schema";
 
 export const saveRefreshToken = async (
-  userId: string,
+  userId: number,
   token: string,
   expiresInDays = 7
 ) => {

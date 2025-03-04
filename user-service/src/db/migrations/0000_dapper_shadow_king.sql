@@ -1,13 +1,13 @@
 CREATE TYPE "public"."user_role" AS ENUM('user', 'poc_team', 'manager', 'approver', 'admin');--> statement-breakpoint
 CREATE TABLE "idea_approvers" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"idea_id" uuid NOT NULL,
-	"user_id" uuid NOT NULL,
+	"id" serial PRIMARY KEY NOT NULL,
+	"idea_id" serial NOT NULL,
+	"user_id" serial NOT NULL,
 	"assigned_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" serial PRIMARY KEY NOT NULL,
 	"username" varchar(255) NOT NULL,
 	"email" varchar(255) NOT NULL,
 	"password" varchar(255) NOT NULL,
@@ -18,22 +18,22 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 CREATE TABLE "teams" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	CONSTRAINT "teams_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
 CREATE TABLE "user_team" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" uuid NOT NULL,
-	"team_id" uuid NOT NULL,
+	"id" serial PRIMARY KEY NOT NULL,
+	"user_id" serial NOT NULL,
+	"team_id" serial NOT NULL,
 	"role_in_team" varchar(100) DEFAULT 'member'
 );
 --> statement-breakpoint
 CREATE TABLE "refresh_tokens" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"user_id" uuid NOT NULL,
+	"user_id" serial NOT NULL,
 	"token" text NOT NULL,
 	"expires_at" timestamp NOT NULL,
 	"revoked" boolean DEFAULT false,
