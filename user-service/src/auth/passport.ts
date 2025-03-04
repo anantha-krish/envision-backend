@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import { eq } from "drizzle-orm";
-import { sign } from "jsonwebtoken";
+import { sign, decode } from "jsonwebtoken";
 import passport from "passport";
 import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
 import { JWT_SECRET } from "../config";
@@ -23,20 +23,16 @@ passport.use(
           username: true,
           role: true,
         },
-        where: eq(users.id, jwt_payload.user_id),
+        where: eq(users.id, jwt_payload.sub),
       });
 
       if (!user) {
         throw new Error("User not found");
         return;
       }
+      const token = sign({ sub: user.id }, JWT_SECRET, { expiresIn: "1h" });
 
-      const token = sign(
-        { id: user.id, email: user.email },
-        process.env.JWT_SECRET || "my_secret",
-        { expiresIn: "1h" }
-      );
-      var payload = {
+      const payload = {
         user,
         token,
       };
