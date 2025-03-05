@@ -11,9 +11,14 @@ import { authorizeRoles } from "../middleware/authorize";
 
 const router = Router();
 
-router.post("/", createUser);
-router.get("/", authenticateJwt, authorizeRoles("manager", "admin"), getUsers);
-router.put("/:id", authenticateJwt, updateUser);
-router.post("/login", loginUser);
+router.post("/api/", createUser);
+router.get(
+  "/api/",
+  authenticateJwt,
+  authorizeRoles("manager", "admin"),
+  getUsers
+);
+router.put("/api/:id", authenticateJwt, updateUser);
+router.post("/api/login", loginUser);
 
 export default router;

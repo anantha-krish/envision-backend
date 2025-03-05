@@ -5,6 +5,7 @@ import userRoutes from "./src/routes/userRoutes";
 import { SERVER_PORT } from "./src/config";
 import { sendKafkaUserEvent } from "./src/config/kafka";
 import cors from "cors";
+import { registerService } from "./src/register_service";
 
 const app = express();
 
@@ -16,26 +17,12 @@ test();
 //app.use(cors());
 app.use(express.json());
 
-app.use("/", userRoutes);
-/*
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+registerService();
+// Register every 30 seconds to ensure availability
+setInterval(registerService, 30000);
 
-app.get(
-  "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/" }),
-  (req, res) => {
-    if (!req.user) {
-      res.redirect("/");
-      return;
-    }
-    const { user, token } = req.user as { user: String; token: string };
-    res.json({ user, token });
-  }
-);
-*/
+app.use("/", userRoutes);
+
 app.listen(SERVER_PORT, () =>
   console.log(`Server running on port ${SERVER_PORT}`)
 );
