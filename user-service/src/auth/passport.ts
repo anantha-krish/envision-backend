@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import { eq } from "drizzle-orm";
-import { sign, decode } from "jsonwebtoken";
 import passport from "passport";
 import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
 import { JWT_SECRET } from "../config";

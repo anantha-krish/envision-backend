@@ -4,6 +4,7 @@ import "./src/auth/passport";
 import userRoutes from "./src/routes/userRoutes";
 import { SERVER_PORT } from "./src/config";
 import { sendKafkaUserEvent } from "./src/config/kafka";
+import cors from "cors";
 
 const app = express();
 
@@ -12,8 +13,9 @@ async function test() {
 }
 
 test();
-
+//app.use(cors());
 app.use(express.json());
+
 app.use("/", userRoutes);
 /*
 app.get(
