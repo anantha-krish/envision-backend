@@ -2,14 +2,14 @@ import dotenv from "dotenv";
 import { eq } from "drizzle-orm";
 import passport from "passport";
 import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
-import { JWT_SECRET } from "../config";
 import { DB } from "../db/db.connection";
 import { users } from "../db/schema";
+import { ACCESS_TOKEN_SECRET } from "../config";
 dotenv.config();
 
 var opts = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: JWT_SECRET,
+  secretOrKey: ACCESS_TOKEN_SECRET,
 };
 
 passport.use(

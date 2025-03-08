@@ -5,6 +5,7 @@ declare global {
     interface User {
       role: string;
       id: string;
+      token: string;
     }
   }
 }

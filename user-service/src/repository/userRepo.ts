@@ -36,13 +36,19 @@ class UserRepository {
     return DB.delete(users).where(eq(users.id, id));
   }
 
-  async updateUser(username: string, email: string, id: number) {
+  async updateUser(id: number, username?: string, email?: string) {
+    const updateFields: Partial<{ username: string; email: string }> = {};
+
+    if (username) {
+      updateFields.username = username;
+    }
+
+    if (email) {
+      updateFields.email = email;
+    }
+
     return await DB.update(users)
-      .set({
-        username,
-        email,
-      })
-      .from(users)
+      .set(updateFields)
       .where(eq(users.id, id))
       .returning();
   }

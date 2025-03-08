@@ -5,7 +5,8 @@ import userRoutes from "./src/routes/userRoutes";
 import { SERVER_PORT } from "./src/config";
 import { sendKafkaUserEvent } from "./src/config/kafka";
 import cors from "cors";
-import { registerService } from "./src/register_service";
+import cookieParser from "cookie-parser";
+import { registerService } from "./src/redis_client";
 
 const app = express();
 
@@ -15,6 +16,7 @@ async function test() {
 
 test();
 //app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
 
 registerService();
