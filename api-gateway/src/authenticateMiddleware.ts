@@ -1,5 +1,9 @@
+import dotnenv from "dotenv";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+dotnenv.configDotenv();
+export const ACCESS_TOKEN_SECRET =
+  process.env.ACCESS_TOKEN_SECRET || "my_secret";
 /*
 const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers["authorization"];
@@ -44,51 +48,27 @@ const rolePermissions: { [role: string]: { [path: string]: string[] } } = {
   },
 };
 */
-const verifyTokenAndGetRole = async (
-  token: string
-): Promise<{ valid: boolean; role?: string }> => {
-  try {
-    const response = await fetch("http://localhost:5000/api/auth/verify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) return { valid: false };
-
-    const data = await response.json();
-    return data.role ? { valid: true, role: data.role } : { valid: false };
-  } catch (error) {
-    return { valid: false };
-  }
-};
-
-const authenticateAndAuthorize = async (
+export const authenticateAndAuthorize = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   const serviceName = `/${req.path.split("/")[1]}`;
-
-  if (serviceName === "/users") {
-    return next(); // Skip authentication for `user-service`
-  }
-
   const token = req.header("Authorization")?.split(" ")[1];
+  const { user_id, role } = jwt.verify(token!, ACCESS_TOKEN_SECRET) as any;
+  if (!user_id || !role) return res.status(403).json({ error: "Forbidden" });
+
   if (!token) return res.status(401).json({ error: "Unauthorized" });
 
-  const { valid, role } = await verifyTokenAndGetRole(token);
-  if (!valid || !role) return res.status(403).json({ error: "Forbidden" });
+  //const { user_id, role } = jwt.verify(token, ACCESS_TOKEN_SECRET) as any;
+  if (!user_id || !role) return res.status(403).json({ error: "Forbidden" });
 
   // 🔹 Check if the role has permission for this specific method & path
   /*const allowedMethods = rolePermissions[role]?.[serviceName] || [];
   if (!allowedMethods.includes(req.method)) {
     return res.status(403).json({ error: "Access Denied" });
   }*/
-
+  req.headers.role = role;
+  req.headers.user_id = user_id;
   next();
 };
-
-export default authenticateAndAuthorize;

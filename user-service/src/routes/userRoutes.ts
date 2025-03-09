@@ -8,7 +8,6 @@ import {
   deleteUser,
   logOut,
   refreshAccessToken,
-  getUserRole,
 } from "../controllers/userController";
 import { authenticateJwt } from "../middleware/authenticate";
 import { authorizeRoles } from "../middleware/authorize";
@@ -27,5 +26,4 @@ router.post("/api/login", loginUser);
 router.delete("/api/:id", authenticateJwt, deleteUser);
 router.get("/api/logout", authenticateJwt, logOut);
 router.get("/api/refresh", refreshAccessToken);
-router.get("/api/verify", authenticateJwt, getUserRole);
 export default router;

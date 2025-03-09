@@ -3,7 +3,7 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 import cors from "cors";
 import dotenv from "dotenv";
 import Redis from "ioredis";
-import authenticateToken from "./authenticateMiddleware";
+import { authenticateAndAuthorize } from "./authenticateMiddleware";
 import { NextFunction } from "http-proxy-middleware/dist/types";
 
 dotenv.config();
@@ -37,22 +37,30 @@ app.get("/redis", (req: Request, res: Response) => {
   res.json({ redis: redis.keys("*") });
 });
 // Proxy Requests Dynamically
-app.use(async (req, res, next) => {
-  const serviceName = req.path.split("/")[1]; // Extract microservice name
-  const target = await getNextService(serviceName);
-
-  if (target) {
-    authenticateToken(req, res, () =>
+app.use(
+  (req, res, next) => {
+    const serviceName = req.path.split("/")[1]; // Extract microservice name
+    /* if (serviceName == "users") {
+      next();
+      return;
+    } else {
+      authenticateAndAuthorize(req, res, next);
+    }*/
+    authenticateAndAuthorize(req, res, next);
+    next();
+  },
+  async (req, res, next) => {
+    const serviceName = req.path.split("/")[1]; // Extract microservice name
+    const target = await getNextService(serviceName);
+    if (target) {
       createProxyMiddleware({
         target,
         changeOrigin: true,
         pathRewrite: { [`^/${serviceName}`]: "/api" },
-      })(req, res, next)
-    );
-  } else {
-    res.status(404).json({ message: "Service not found" });
+      })(req, res, next);
+    }
   }
-});
+);
 
 // Health Check Route
 app.get("/", (req: Request, res: Response) => {

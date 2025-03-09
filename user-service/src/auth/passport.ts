@@ -22,7 +22,7 @@ passport.use(
           username: true,
           role: true,
         },
-        where: eq(users.id, jwt_payload.sub),
+        where: eq(users.id, jwt_payload.user_id),
       });
 
       if (!user) {

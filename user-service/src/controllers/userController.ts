@@ -71,16 +71,6 @@ const updateUser = async (req: Request, res: Response) => {
   }
 };
 
-const getUserRole = async (req: Request, res: Response) => {
-  var role = req?.user?.role ?? "";
-  if (!role) {
-    res.status(404).json({ error: "No roles found" });
-    return;
-  } else {
-    res.status(200).json({ role });
-  }
-};
-
 const deleteUser = async (req: Request, res: Response) => {
   const { id } = req.params;
 
@@ -123,12 +113,20 @@ const loginUser = async (req: Request, res: Response) => {
       return;
     }
 
-    const accessToken = jwt.sign({ sub: user.id }, ACCESS_TOKEN_SECRET, {
-      expiresIn: ACCESS_TOKEN_EXPIRY_IN_MINS,
-    });
-    const refreshToken = jwt.sign({ sub: user.id }, REFRESH_TOKEN_SECRET, {
-      expiresIn: REFRESH_TOKEN_EXPIRY_IN_DAYS,
-    });
+    const accessToken = jwt.sign(
+      { user_id: user.id, role: user.role },
+      ACCESS_TOKEN_SECRET,
+      {
+        expiresIn: ACCESS_TOKEN_EXPIRY_IN_MINS,
+      }
+    );
+    const refreshToken = jwt.sign(
+      { user_id: user.id, role: user.role },
+      REFRESH_TOKEN_SECRET,
+      {
+        expiresIn: REFRESH_TOKEN_EXPIRY_IN_DAYS,
+      }
+    );
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
@@ -171,7 +169,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
   try {
     const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
 
-    const storedToken = await getRefreshToken((decoded as any).sub);
+    const storedToken = await getRefreshToken((decoded as any).user_id);
 
     if (!storedToken || storedToken !== refreshToken) {
       res.sendStatus(403); // Token mismatch or expired
@@ -180,7 +178,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
 
     // Generate new access token
     const newAccessToken = jwt.sign(
-      { id: (decoded as any).sub },
+      { id: (decoded as any).user_id },
       ACCESS_TOKEN_SECRET,
       {
         expiresIn: ACCESS_TOKEN_EXPIRY_IN_MINS,
@@ -201,5 +199,4 @@ export {
   deleteUser,
   logOut,
   refreshAccessToken,
-  getUserRole,
 };
