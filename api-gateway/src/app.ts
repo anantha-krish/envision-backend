@@ -3,6 +3,8 @@ import { createProxyMiddleware } from "http-proxy-middleware";
 import cors from "cors";
 import dotenv from "dotenv";
 import Redis from "ioredis";
+import authenticateToken from "./authenticateMiddleware";
+import { NextFunction } from "http-proxy-middleware/dist/types";
 
 dotenv.config();
 
@@ -30,6 +32,7 @@ async function getNextService(serviceName: string): Promise<string | null> {
   serviceIndex[serviceName] += 1;
   return selectedService;
 }
+
 app.get("/redis", (req: Request, res: Response) => {
   res.json({ redis: redis.keys("*") });
 });
@@ -39,11 +42,13 @@ app.use(async (req, res, next) => {
   const target = await getNextService(serviceName);
 
   if (target) {
-    createProxyMiddleware({
-      target,
-      changeOrigin: true,
-      pathRewrite: { [`^/${serviceName}`]: "/api" },
-    })(req, res, next);
+    authenticateToken(req, res, () =>
+      createProxyMiddleware({
+        target,
+        changeOrigin: true,
+        pathRewrite: { [`^/${serviceName}`]: "/api" },
+      })(req, res, next)
+    );
   } else {
     res.status(404).json({ message: "Service not found" });
   }

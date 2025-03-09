@@ -10,7 +10,9 @@ redis.on("error", (err) => console.error("Redis Error:", err));
 
 export const registerService = async () => {
   await redis.sadd(`services:users`, `http://${SERVER_HOST}:${SERVER_PORT}`);
-  console.log(`Registered service at http://${SERVER_HOST}:${SERVER_PORT}`);
+  console.log(
+    `Registered user service at http://${SERVER_HOST}:${SERVER_PORT}`
+  );
 };
 
 export const blacklistToken = async (token: string) =>

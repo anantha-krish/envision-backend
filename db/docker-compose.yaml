@@ -32,9 +32,26 @@ services:
     volumes:
       - idea_db_server_data:/var/lib/postgresql/data
 
+  notification_db_server:
+    image: postgres:17.0
+    container_name: notification_db_server
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: notification_db
+      POSTGRES_PASSWORD: notification_db_password
+      POSTGRES_DB: notification_service
+    ports:
+      - "5435:5432"
+    volumes:
+      - notification_db_server_data:/var/lib/postgresql/data
+
 
 volumes:
   user_db_server_data:
     driver: local
   idea_db_server_data:
+    driver: local
+  notification_db_server_data:
     driver: local

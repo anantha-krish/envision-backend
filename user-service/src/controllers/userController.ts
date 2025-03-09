@@ -19,6 +19,7 @@ import {
   REFRESH_TOKEN_EXPIRY_IN_DAYS,
   REFRESH_TOKEN_SECRET,
 } from "../config";
+import { error } from "console";
 // Create User
 const createUser = async (req: Request, res: Response) => {
   const { username, email, password, role } = req.body;
@@ -67,6 +68,16 @@ const updateUser = async (req: Request, res: Response) => {
     res.json(result[0]);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+const getUserRole = async (req: Request, res: Response) => {
+  var role = req?.user?.role ?? "";
+  if (!role) {
+    res.status(404).json({ error: "No roles found" });
+    return;
+  } else {
+    res.status(200).json({ role });
   }
 };
 
@@ -190,4 +201,5 @@ export {
   deleteUser,
   logOut,
   refreshAccessToken,
+  getUserRole,
 };
