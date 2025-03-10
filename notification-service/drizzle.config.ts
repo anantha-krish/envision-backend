@@ -1,7 +1,7 @@
 import { defineConfig } from "drizzle-kit";
-import { DB_URL } from "./src/config.ts";
+import { DB_URL } from "./src/config";
 
-export const db = defineConfig({
+export default defineConfig({
   schema: "./src/db/schema/*",
   out: "./src/db/migrations",
   dialect: "postgresql",

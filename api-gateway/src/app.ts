@@ -33,19 +33,50 @@ async function getNextService(serviceName: string): Promise<string | null> {
   return selectedService;
 }
 
-app.get("/redis", (req: Request, res: Response) => {
-  res.json({ redis: redis.keys("*") });
+app.get("/redis", async (req: Request, res: Response) => {
+  try {
+    const keys = await redis.keys("*"); // Get all keys
+
+    const values = await Promise.all(
+      keys.map(async (key) => {
+        const type = await redis.type(key); // Check type of key
+
+        let value;
+        switch (type) {
+          case "string":
+            value = await redis.get(key);
+            break;
+          case "list":
+            value = await redis.lrange(key, 0, -1);
+            break;
+          case "set":
+            value = await redis.smembers(key);
+            break;
+          case "hash":
+            value = await redis.hgetall(key);
+            break;
+          default:
+            value = `Unsupported type: ${type}`;
+        }
+
+        return { key, type, value };
+      })
+    );
+
+    res.json({ redis: values });
+  } catch (error) {
+    console.error("Error fetching Redis keys and values:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 // Proxy Requests Dynamically
 app.use(
   (req, res, next) => {
     const serviceName = req.path.split("/")[1]; // Extract microservice name
-    /* if (serviceName == "users") {
+    if (serviceName == "users") {
       next();
       return;
-    } else {
-      authenticateAndAuthorize(req, res, next);
-    }*/
+    }
     authenticateAndAuthorize(req, res, next);
     next();
   },

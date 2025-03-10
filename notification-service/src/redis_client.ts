@@ -14,3 +14,12 @@ export const registerService = async () => {
     `Registered notifications service at http://${SERVER_HOST}:${SERVER_PORT}`
   );
 };
+
+export const getUnreadCount = async (userId: string) =>
+  await redis.hget(`notifications:${userId}`, "unread");
+
+export const updateUnreadCount = async (userId: string) =>
+  await redis.hincrby(`notifications:${userId}`, "unread", 1);
+
+export const markAllAsRead = async (userId: string) =>
+  await redis.hset(`notifications:${userId}`, "unread", 0);
