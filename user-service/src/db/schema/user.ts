@@ -1,12 +1,10 @@
 import {
-  pgTable,
-  uuid,
-  varchar,
-  timestamp,
   pgEnum,
+  pgTable,
   serial,
+  timestamp,
+  varchar,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 
 // ENUM for Role-Based Access
 export const userRoles = pgEnum("user_role", [

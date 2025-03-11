@@ -55,20 +55,22 @@ export const authenticateAndAuthorize = async (
 ) => {
   const serviceName = `/${req.path.split("/")[1]}`;
   const token = req.header("Authorization")?.split(" ")[1];
-  const { user_id, role } = jwt.verify(token!, ACCESS_TOKEN_SECRET) as any;
-  if (!user_id || !role) return res.status(403).json({ error: "Forbidden" });
-
   if (!token) return res.status(401).json({ error: "Unauthorized" });
+  try {
+    const { user_id, role } = jwt.verify(token, ACCESS_TOKEN_SECRET) as any;
+    if (!user_id || !role) return res.status(403).json({ error: "Forbidden" });
+    req.headers.role = role;
+    req.headers.user_id = user_id;
+    next();
+  } catch (error: any) {
+    return res.status(401).json({ error: error.message });
+  }
 
   //const { user_id, role } = jwt.verify(token, ACCESS_TOKEN_SECRET) as any;
-  if (!user_id || !role) return res.status(403).json({ error: "Forbidden" });
 
   // 🔹 Check if the role has permission for this specific method & path
   /*const allowedMethods = rolePermissions[role]?.[serviceName] || [];
   if (!allowedMethods.includes(req.method)) {
     return res.status(403).json({ error: "Access Denied" });
   }*/
-  req.headers.role = role;
-  req.headers.user_id = user_id;
-  next();
 };

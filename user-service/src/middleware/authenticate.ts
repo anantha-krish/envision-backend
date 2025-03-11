@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 import passport from "passport";
 import { isTokenBlacklisted } from "../redis_client";
 

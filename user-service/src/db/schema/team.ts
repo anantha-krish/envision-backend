@@ -1,12 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  varchar,
-  timestamp,
-  pgEnum,
-  serial,
-} from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { users } from "./user";
 
 // Teams Table

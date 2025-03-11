@@ -9,7 +9,6 @@ import { NextFunction } from "http-proxy-middleware/dist/types";
 dotenv.config();
 
 const app = express();
-app.use(cors());
 
 // Define microservice routes
 const routes: { [key: string]: string } = {
@@ -78,7 +77,6 @@ app.use(
       return;
     }
     authenticateAndAuthorize(req, res, next);
-    next();
   },
   async (req, res, next) => {
     const serviceName = req.path.split("/")[1]; // Extract microservice name
@@ -87,12 +85,14 @@ app.use(
       createProxyMiddleware({
         target,
         changeOrigin: true,
+        secure: false,
         pathRewrite: { [`^/${serviceName}`]: "/api" },
       })(req, res, next);
     }
   }
 );
-
+app.use(cors());
+app.use(express.json());
 // Health Check Route
 app.get("/", (req: Request, res: Response) => {
   res.send("API Gateway is running...");

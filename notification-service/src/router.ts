@@ -7,8 +7,8 @@ import { getUnreadCount, markAllAsRead } from "./redis_client";
 const router = express.Router();
 
 // Fetch user notifications
-router.get("/", async (req, res) => {
-  const userId = req.headers.user_id as string;
+router.get("/:user_id?", async (req, res) => {
+  const userId = req.params.user_id ?? (req.headers.user_id as string);
   if (!userId) {
     res.status(404);
     return;

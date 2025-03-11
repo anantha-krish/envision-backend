@@ -13,9 +13,8 @@ const sendIdeaUpdate = async () => {
     messages: [
       {
         value: JSON.stringify({
-          userId: "123",
-          ideaId: "457",
-          messageText: "Idea updated!",
+          userId: "1",
+          messageText: "Profile updated",
         }),
       },
     ],

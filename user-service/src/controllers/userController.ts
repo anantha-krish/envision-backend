@@ -1,17 +1,14 @@
+import { compare, hash } from "bcryptjs";
 import { Request, Response } from "express";
-import { DB } from "../db/db.connection";
-import { sendKafkaUserEvent } from "../config/kafka";
-import { hash, compare } from "bcryptjs";
-import jwt, { SignOptions } from "jsonwebtoken";
-import { users } from "../db/schema";
-import { eq } from "drizzle-orm";
-import { userRepo } from "../repository/userRepo";
+import jwt from "jsonwebtoken";
+import { sendUserUpdateEvent } from "../config/kafka";
 import {
   blacklistToken,
   deleteRefreshToken,
   getRefreshToken,
   saveRefreshToken,
 } from "../redis_client";
+import { userRepo } from "../repository/userRepo";
 
 import {
   ACCESS_TOKEN_EXPIRY_IN_MINS,
@@ -19,7 +16,6 @@ import {
   REFRESH_TOKEN_EXPIRY_IN_DAYS,
   REFRESH_TOKEN_SECRET,
 } from "../config";
-import { error } from "console";
 // Create User
 const createUser = async (req: Request, res: Response) => {
   const { username, email, password, role } = req.body;
@@ -33,11 +29,11 @@ const createUser = async (req: Request, res: Response) => {
       role
     );
     var user = result[0];
-    await sendKafkaUserEvent("USER_CREATED", {
+    /* await sendKafkaUserEvent("USER_CREATED", {
       userId: user.id,
       userName: user.username,
     });
-
+*/
     res.json(user);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -63,7 +59,10 @@ const updateUser = async (req: Request, res: Response) => {
   try {
     const result = await userRepo.updateUser(parseInt(id), username, email);
 
-    await sendKafkaUserEvent("USER_UPDATED", result[0]);
+    await sendUserUpdateEvent({
+      userId: parseInt(id),
+      messageText: `User: ${username} Profile details has been updated`,
+    });
 
     res.json(result[0]);
   } catch (err: any) {
@@ -77,13 +76,13 @@ const deleteUser = async (req: Request, res: Response) => {
   try {
     const result = await userRepo.deleteUser(parseInt(id));
 
-    if (result.length === 0) {
+    if (result.rowCount === 0) {
       res.status(404).json({ message: "User not found" });
       return;
     }
 
-    await sendKafkaUserEvent("USER_DELETED", { userId: id });
-
+    /*  await sendKafkaUserEvent("USER_DELETED", { userId: id });
+     */
     res.status(204).send();
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -167,9 +166,12 @@ const refreshAccessToken = async (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
+    const { user_id, role } = jwt.verify(
+      refreshToken,
+      REFRESH_TOKEN_SECRET
+    ) as any;
 
-    const storedToken = await getRefreshToken((decoded as any).user_id);
+    const storedToken = await getRefreshToken(user_id);
 
     if (!storedToken || storedToken !== refreshToken) {
       res.sendStatus(403); // Token mismatch or expired
@@ -178,7 +180,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
 
     // Generate new access token
     const newAccessToken = jwt.sign(
-      { id: (decoded as any).user_id },
+      { user_id: user_id, role: role },
       ACCESS_TOKEN_SECRET,
       {
         expiresIn: ACCESS_TOKEN_EXPIRY_IN_MINS,
@@ -193,10 +195,10 @@ const refreshAccessToken = async (req: Request, res: Response) => {
 
 export {
   createUser,
-  getUsers,
-  updateUser,
-  loginUser,
   deleteUser,
+  getUsers,
+  loginUser,
   logOut,
   refreshAccessToken,
+  updateUser,
 };
