@@ -7,3 +7,5 @@ export const WS_SERVER_PORT = Number(process.env.WS_SERVER_PORT) || 5003;
 export const KAFKA_BROKER = process.env.KAFKA_BROKER || "";
 export const REDIS_URL = process.env.REDIS_URL || "";
 export const SERVER_HOST = process.env.SERVER_HOST || "localhost";
+
+export const SERVICE_REGISTER_INTERVAL = 3000;

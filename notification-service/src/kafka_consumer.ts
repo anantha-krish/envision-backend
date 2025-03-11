@@ -13,7 +13,7 @@ const consumer = kafka.consumer({ groupId: "notification-group" });
 export const consumeMessages = async () => {
   await consumer.connect();
   await consumer.subscribe({
-    topics: ["user-updates", "idea-updates"],
+    topics: ["notify-user", "notify-idea"],
     fromBeginning: true,
   });
 
@@ -29,8 +29,6 @@ export const consumeMessages = async () => {
 
       // Update Redis unread count
       await updateUnreadCount(userId);
-
-      console.log(`📩 Notification stored for user: ${userId}`);
     },
   });
 };
