@@ -4,7 +4,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import Redis from "ioredis";
 import { authenticateAndAuthorize } from "./authenticateMiddleware";
-import { NextFunction } from "http-proxy-middleware/dist/types";
 
 dotenv.config();
 
@@ -93,6 +92,7 @@ app.use(
 );
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 // Health Check Route
 app.get("/", (req: Request, res: Response) => {
   res.send("API Gateway is running...");
