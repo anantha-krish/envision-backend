@@ -1,6 +1,11 @@
 import { Kafka } from "kafkajs";
 import { db } from "./db/db.connection";
-import { individualNotifications, aggregatedNotifications } from "./db/schema";
+import {
+  individualNotifications,
+  aggregatedNotifications,
+  notificationActors,
+  notificationRecipients,
+} from "./db/schema";
 import { updateUnreadCount } from "./redis_client";
 import { and, eq, sql } from "drizzle-orm";
 import { notifyClient } from "../ws_server";
@@ -22,45 +27,101 @@ export const consumeMessages = async () => {
   await consumer.run({
     eachMessage: async ({ message }) => {
       const data = JSON.parse(message.value?.toString() || "{}");
-      const { actorId, ideaId, type } = data; // recipients = [userId1, userId2]
-      console.log(`recieved${JSON.stringify(data)}`);
-      //TODO fetch participants of idea
-      var recipients = data.recipients ?? [1, 2];
+      const { actorId, ideaId, type, recipients = [], messageText } = data;
 
-      for (const userId of recipients) {
-        const existingAggregate = await db
-          .select()
-          .from(aggregatedNotifications)
-          .where(
-            and(
-              eq(aggregatedNotifications.userId, userId),
-              eq(aggregatedNotifications.ideaId, ideaId),
-              eq(aggregatedNotifications.type, type)
-            )
-          )
-          .limit(1);
+      console.log(`Received: ${JSON.stringify(data)}`);
 
-        if (existingAggregate.length > 0) {
-          // Update aggregated record
-          await db
-            .update(aggregatedNotifications)
-            .set({
-              actorIds: sql`${aggregatedNotifications.actorIds} || ${actorId}`,
-              count: sql`${aggregatedNotifications.count} + 1`,
-              updatedAt: sql`now()`,
-            })
-            .where(eq(aggregatedNotifications.id, existingAggregate[0].id));
-        } else {
-          // Insert a new aggregate record
-          await db.insert(aggregatedNotifications).values({
+      await db.transaction(async (tx) => {
+        for (const userId of recipients) {
+          // Insert individual notification
+          await tx.insert(individualNotifications).values({
             userId,
             ideaId,
+            actorId,
             type,
-            actorIds: [actorId],
-            count: 1,
+            message: messageText,
           });
+
+          // Check if an aggregated notification exists for this idea & type
+          const existingAggregate = await tx
+            .select()
+            .from(aggregatedNotifications)
+            .where(
+              and(
+                eq(aggregatedNotifications.ideaId, ideaId),
+                eq(aggregatedNotifications.type, type)
+              )
+            )
+            .limit(1);
+
+          let aggregatedNotificationId;
+
+          if (existingAggregate.length > 0) {
+            // Update existing aggregated notification
+            aggregatedNotificationId = existingAggregate[0].id;
+            await tx
+              .update(aggregatedNotifications)
+              .set({
+                count: sql`${aggregatedNotifications.count} + 1`,
+                updatedAt: sql`now()`,
+              })
+              .where(eq(aggregatedNotifications.id, aggregatedNotificationId));
+          } else {
+            // Insert new aggregated notification
+            const insertedAggregate = await tx
+              .insert(aggregatedNotifications)
+              .values({
+                ideaId,
+                type,
+                count: 1,
+              })
+              .returning({ id: aggregatedNotifications.id });
+            aggregatedNotificationId = insertedAggregate[0].id;
+          }
+
+          // Insert actor into `notificationActors` if not already present
+          const existingActor = await tx
+            .select()
+            .from(notificationActors)
+            .where(
+              and(
+                eq(notificationActors.notificationId, aggregatedNotificationId),
+                eq(notificationActors.actorId, actorId)
+              )
+            )
+            .limit(1);
+
+          if (existingActor.length === 0) {
+            await tx.insert(notificationActors).values({
+              notificationId: aggregatedNotificationId,
+              actorId,
+            });
+          }
+
+          // Insert recipient into `notificationRecipients` if not already present
+          const existingRecipient = await tx
+            .select()
+            .from(notificationRecipients)
+            .where(
+              and(
+                eq(
+                  notificationRecipients.notificationId,
+                  aggregatedNotificationId
+                ),
+                eq(notificationRecipients.userId, userId)
+              )
+            )
+            .limit(1);
+
+          if (existingRecipient.length === 0) {
+            await tx.insert(notificationRecipients).values({
+              notificationId: aggregatedNotificationId,
+              userId,
+              isRead: false,
+            });
+          }
         }
-      }
+      });
 
       // Update Redis unread count
       recipients.forEach((userId) => updateUnreadCount(userId));

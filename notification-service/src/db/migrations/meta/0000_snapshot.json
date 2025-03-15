@@ -1,5 +1,5 @@
 {
-  "id": "f52c8631-725d-4694-a16f-39fb4dc58374",
+  "id": "3e97c05a-37f7-469e-8b72-2851959d2a58",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -14,12 +14,6 @@
           "primaryKey": true,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "idea_id": {
           "name": "idea_id",
           "type": "integer",
@@ -32,26 +26,12 @@
           "primaryKey": false,
           "notNull": true
         },
-        "actor_ids": {
-          "name": "actor_ids",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::json"
-        },
         "count": {
           "name": "count",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "default": 1
-        },
-        "is_read": {
-          "name": "is_read",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
+          "default": 0
         },
         "updated_at": {
           "name": "updated_at",
@@ -126,6 +106,117 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.notification_actors": {
+      "name": "notification_actors",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "notification_id": {
+          "name": "notification_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "notification_actors_notification_id_aggregated_notifications_id_fk": {
+          "name": "notification_actors_notification_id_aggregated_notifications_id_fk",
+          "tableFrom": "notification_actors",
+          "tableTo": "aggregated_notifications",
+          "columnsFrom": [
+            "notification_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.notification_recipients": {
+      "name": "notification_recipients",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "notification_id": {
+          "name": "notification_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_read": {
+          "name": "is_read",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "notification_recipients_notification_id_aggregated_notifications_id_fk": {
+          "name": "notification_recipients_notification_id_aggregated_notifications_id_fk",
+          "tableFrom": "notification_recipients",
+          "tableTo": "aggregated_notifications",
+          "columnsFrom": [
+            "notification_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

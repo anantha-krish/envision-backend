@@ -3,10 +3,8 @@
   "version": "1.0.0",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.ts",
-    "start:notification-service": "nodemon server.ts",
-    "start:ws-server": "nodemon ws_server.ts",
-    "dev": "npm-run-all --parallel start:notification-service start:ws-server",
+    "start": "tsc && node dist/server.js",
+    "dev": "nodemon server.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",

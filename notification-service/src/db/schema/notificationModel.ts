@@ -20,14 +20,29 @@ export const individualNotifications = pgTable("individual_notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Aggregated notifications (for grouped likes/comments)
 export const aggregatedNotifications = pgTable("aggregated_notifications", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
   ideaId: integer("idea_id").notNull(),
-  type: text("type").notNull(), // "like" or "comment"
-  actorIds: text("actor_ids").array().notNull().default([]), // Array of user IDs who liked/commented
-  count: integer("count").default(1), // Count of likes/comments
+  type: text("type").notNull(),
+  count: integer("count").default(0),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const notificationActors = pgTable("notification_actors", {
+  id: serial("id").primaryKey(),
+  notificationId: integer("notification_id")
+    .notNull()
+    .references(() => aggregatedNotifications.id, { onDelete: "cascade" }),
+  actorId: integer("actor_id").notNull(), // Each user who engaged
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notificationRecipients = pgTable("notification_recipients", {
+  id: serial("id").primaryKey(),
+  notificationId: integer("notification_id")
+    .notNull()
+    .references(() => aggregatedNotifications.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull(), // Recipient of the notification
   isRead: boolean("is_read").default(false),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -1,12 +1,14 @@
 import express, { Request, Response } from "express";
 import { db } from "./db/db.connection";
-import { individualNotifications, aggregatedNotifications } from "./db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import {
+  individualNotifications,
+  aggregatedNotifications,
+  notificationRecipients,
+} from "./db/schema";
+import { eq, desc, sql, and } from "drizzle-orm";
 import { getUnreadCount, markAllAsRead } from "./redis_client";
 
 const router = express.Router();
-
-// ✅ Mark all notifications as read for a user
 router.post("/mark-read/:userId?", async (req: Request, res: Response) => {
   const userId = req.params.userId ?? (req.headers.user_id as string);
   if (!userId) {
@@ -16,14 +18,17 @@ router.post("/mark-read/:userId?", async (req: Request, res: Response) => {
 
   try {
     await db.transaction(async (tx) => {
+      // Mark individual notifications as read
       await tx
         .update(individualNotifications)
         .set({ isRead: true })
         .where(eq(individualNotifications.userId, +userId));
+
+      // Mark aggregated notifications as read for this user
       await tx
-        .update(aggregatedNotifications)
-        .set({ isRead: true })
-        .where(eq(aggregatedNotifications.userId, +userId));
+        .update(notificationRecipients)
+        .set({ isRead: true, updatedAt: sql`now()` })
+        .where(eq(notificationRecipients.userId, +userId));
     });
 
     // Reset unread count in Redis
@@ -43,11 +48,27 @@ router.get("/:userId?", async (req, res) => {
   try {
     const unreadCount = await getUnreadCount(userId);
 
-    // Fetch Aggregated Notifications
+    // Fetch Aggregated Notifications with Read Status for the Recipient
     const aggregated = await db
-      .select()
+      .select({
+        id: aggregatedNotifications.id,
+        ideaId: aggregatedNotifications.ideaId,
+        type: aggregatedNotifications.type,
+        count: aggregatedNotifications.count,
+        updatedAt: aggregatedNotifications.updatedAt,
+        isRead: sql<boolean>`CASE 
+                      WHEN ${notificationRecipients.isRead} IS NULL THEN false 
+                      ELSE ${notificationRecipients.isRead} 
+                    END`.as("is_read"),
+      })
       .from(aggregatedNotifications)
-      .where(eq(aggregatedNotifications.userId, +userId))
+      .leftJoin(
+        notificationRecipients,
+        and(
+          eq(aggregatedNotifications.id, notificationRecipients.notificationId),
+          eq(notificationRecipients.userId, +userId)
+        )
+      )
       .orderBy(desc(aggregatedNotifications.updatedAt))
       .limit(limit)
       .offset(offset);
@@ -64,8 +85,8 @@ router.get("/:userId?", async (req, res) => {
     // Get total count
     const totalAggregated = await db
       .select({ count: sql<number>`COUNT(*)` })
-      .from(aggregatedNotifications)
-      .where(eq(aggregatedNotifications.userId, +userId));
+      .from(notificationRecipients)
+      .where(eq(notificationRecipients.userId, +userId));
 
     const totalIndividual = await db
       .select({ count: sql<number>`COUNT(*)` })
@@ -85,5 +106,4 @@ router.get("/:userId?", async (req, res) => {
     res.status(500).json({ error: "Internal error" });
   }
 });
-
 export default router;

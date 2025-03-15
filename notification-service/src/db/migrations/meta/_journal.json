@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1742028303406,
-      "tag": "0000_glossy_molly_hayes",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1742033025406,
-      "tag": "0001_great_omega_sentinel",
+      "when": 1742055992486,
+      "tag": "0000_quiet_celestials",
       "breakpoints": true
     }
   ]
