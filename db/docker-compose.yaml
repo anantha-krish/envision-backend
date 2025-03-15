@@ -46,7 +46,20 @@ services:
       - "5435:5432"
     volumes:
       - notification_db_server_data:/var/lib/postgresql/data
-
+  engagement_db_server:
+    image: postgres:17.0
+    container_name: engagement_db_server
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: engagement_db
+      POSTGRES_PASSWORD: engagement_db_password
+      POSTGRES_DB: engagement_service
+    ports:
+      - "5436:5432"
+    volumes:
+      - engagement_db_server_data:/var/lib/postgresql/data
 
 volumes:
   user_db_server_data:
@@ -54,4 +67,6 @@ volumes:
   idea_db_server_data:
     driver: local
   notification_db_server_data:
+    driver: local
+  engagement_db_server_data:
     driver: local

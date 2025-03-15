@@ -1,11 +1,11 @@
 {
-  "id": "f3cb1e2a-a507-4fdf-bc28-74356c5ed1ad",
-  "prevId": "f52c8631-725d-4694-a16f-39fb4dc58374",
+  "id": "a381749e-61ad-482e-8257-cf43c9acde8f",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.aggregated_notifications": {
-      "name": "aggregated_notifications",
+    "public.comments": {
+      "name": "comments",
       "schema": "",
       "columns": {
         "id": {
@@ -26,35 +26,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "type": {
-          "name": "type",
+        "content": {
+          "name": "content",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "actor_ids": {
-          "name": "actor_ids",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'"
-        },
-        "count": {
-          "name": "count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 1
-        },
-        "is_read": {
-          "name": "is_read",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "updated_at": {
-          "name": "updated_at",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false,
@@ -69,8 +48,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.individual_notifications": {
-      "name": "individual_notifications",
+    "public.likes": {
+      "name": "likes",
       "schema": "",
       "columns": {
         "id": {
@@ -90,31 +69,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
-        },
-        "actor_id": {
-          "name": "actor_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "message": {
-          "name": "message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_read": {
-          "name": "is_read",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
         },
         "created_at": {
           "name": "created_at",

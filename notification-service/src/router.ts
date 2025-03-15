@@ -1,21 +1,33 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import { db } from "./db/db.connection";
-import { notifications } from "./db/schema";
-import { eq, desc, count } from "drizzle-orm";
+import { individualNotifications, aggregatedNotifications } from "./db/schema";
+import { eq, desc, sql } from "drizzle-orm";
 import { getUnreadCount, markAllAsRead } from "./redis_client";
 
 const router = express.Router();
 
-router.post("/mark-read/:userId?", async (req, res) => {
-  const userIdentity = req.params.userId ?? (req.headers.user_id as string);
+// ✅ Mark all notifications as read for a user
+router.post("/mark-read/:userId?", async (req: Request, res: Response) => {
+  const userId = req.params.userId ?? (req.headers.user_id as string);
+  if (!userId) {
+    res.status(400).json({ error: "User ID is required" });
+    return;
+  }
+
   try {
-    await db
-      .update(notifications)
-      .set({ isRead: true })
-      .where(eq(notifications.userId, parseInt(userIdentity)));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(individualNotifications)
+        .set({ isRead: true })
+        .where(eq(individualNotifications.userId, +userId));
+      await tx
+        .update(aggregatedNotifications)
+        .set({ isRead: true })
+        .where(eq(aggregatedNotifications.userId, +userId));
+    });
 
     // Reset unread count in Redis
-    await markAllAsRead(userIdentity);
+    await markAllAsRead(userId);
 
     res.json({ message: "Notifications marked as read" });
   } catch (error: any) {
@@ -23,34 +35,51 @@ router.post("/mark-read/:userId?", async (req, res) => {
   }
 });
 
-// Fetch user notifications
 router.get("/:userId?", async (req, res) => {
-  const userIdentity = req.params.userId ?? (req.headers.user_id as string);
+  const userId = req.params.userId ?? (req.headers.user_id as string);
   const limit = parseInt(req.query.limit as string) || 5;
   const offset = parseInt(req.query.offset as string) || 0;
-  if (!userIdentity) {
-    res.status(404);
-    return;
-  }
+
   try {
-    const unreadCount = await getUnreadCount(userIdentity);
-    const userNotifications = await db
+    const unreadCount = await getUnreadCount(userId);
+
+    // Fetch Aggregated Notifications
+    const aggregated = await db
       .select()
-      .from(notifications)
-      .where(eq(notifications.userId, parseInt(userIdentity)))
-      .orderBy(desc(notifications.createdAt))
+      .from(aggregatedNotifications)
+      .where(eq(aggregatedNotifications.userId, +userId))
+      .orderBy(desc(aggregatedNotifications.updatedAt))
       .limit(limit)
       .offset(offset);
-    const total = await db
-      .select({ count: count() })
-      .from(notifications)
-      .where(eq(notifications.userId, parseInt(userIdentity)));
 
-    res.status(200).json({
+    // Fetch Individual Notifications
+    const individual = await db
+      .select()
+      .from(individualNotifications)
+      .where(eq(individualNotifications.userId, +userId))
+      .orderBy(desc(individualNotifications.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get total count
+    const totalAggregated = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(aggregatedNotifications)
+      .where(eq(aggregatedNotifications.userId, +userId));
+
+    const totalIndividual = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(individualNotifications)
+      .where(eq(individualNotifications.userId, +userId));
+
+    const total =
+      Number(totalAggregated[0].count) + Number(totalIndividual[0].count);
+
+    res.json({
       unreadCount: unreadCount || 0,
-      notifications: userNotifications,
-      total: total[0].count,
-      hasMore: offset + limit < total[0].count,
+      notifications: [...aggregated, ...individual],
+      total,
+      hasMore: offset + limit < total,
     });
   } catch (err) {
     res.status(500).json({ error: "Internal error" });
