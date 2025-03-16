@@ -23,7 +23,11 @@ router.post("/likes/:ideaId", async (req: Request, res: Response) => {
   }
 
   await db.insert(likes).values({ userId, ideaId });
-  await sendNewLikeEvent({ actorId: userId, ideaId });
+  await sendNewLikeEvent({
+    actorId: userId,
+    ideaId,
+    messageText: `User: ${userId} liked Idea-${ideaId} `,
+  });
   res.status(201).json({ message: "Liked successfully" });
 });
 
@@ -66,7 +70,12 @@ router.post("/comments/:ideaId", async (req: Request, res: Response) => {
   const { content } = parsed.data;
 
   await db.insert(comments).values({ userId, ideaId, content });
-  await sendNewCommentEvent({ actorId: userId, ideaId });
+  await sendNewCommentEvent({
+    actorId: userId,
+    ideaId,
+    messageText:
+      content.length > 50 ? content.substring(0, 50).concat("...") : content,
+  });
   res.status(201).json({ message: "Comment added" });
 });
 

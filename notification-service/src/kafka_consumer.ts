@@ -27,59 +27,88 @@ export const consumeMessages = async () => {
   await consumer.run({
     eachMessage: async ({ message }) => {
       const data = JSON.parse(message.value?.toString() || "{}");
-      const { actorId, ideaId, type, recipients = [], messageText } = data;
+      const {
+        actorId,
+        ideaId,
+        type,
+        recipients = [1, 2, actorId],
+        messageText,
+      } = data;
 
       console.log(`Received: ${JSON.stringify(data)}`);
 
       await db.transaction(async (tx) => {
-        for (const userId of recipients) {
-          // Insert individual notification
-          await tx.insert(individualNotifications).values({
-            userId,
-            ideaId,
-            actorId,
-            type,
-            message: messageText,
-          });
+        let aggregatedNotificationId: number | null = null;
 
-          // Check if an aggregated notification exists for this idea & type
-          const existingAggregate = await tx
+        // 🔹 Check if an aggregated notification exists
+        const existingAggregate = await tx
+          .select()
+          .from(aggregatedNotifications)
+          .where(
+            and(
+              eq(aggregatedNotifications.ideaId, ideaId),
+              eq(aggregatedNotifications.type, type)
+            )
+          )
+          .limit(1);
+
+        if (existingAggregate.length > 0) {
+          aggregatedNotificationId = existingAggregate[0].id;
+          await tx
+            .update(aggregatedNotifications)
+            .set({
+              count: sql`${aggregatedNotifications.count} + 1`,
+              updatedAt: sql`now()`,
+            })
+            .where(eq(aggregatedNotifications.id, aggregatedNotificationId));
+        } else {
+          const insertedAggregate = await tx
+            .insert(aggregatedNotifications)
+            .values({
+              ideaId,
+              type,
+              count: 1,
+            })
+            .returning({ id: aggregatedNotifications.id });
+          aggregatedNotificationId = insertedAggregate[0].id;
+        }
+
+        for (const userId of recipients) {
+          // 🛑 Check if the individual notification already exists
+          const existingIndividual = await tx
             .select()
-            .from(aggregatedNotifications)
+            .from(individualNotifications)
             .where(
               and(
-                eq(aggregatedNotifications.ideaId, ideaId),
-                eq(aggregatedNotifications.type, type)
+                eq(individualNotifications.userId, userId),
+                eq(individualNotifications.ideaId, ideaId),
+                eq(individualNotifications.actorId, actorId),
+                eq(individualNotifications.type, type)
               )
             )
             .limit(1);
 
-          let aggregatedNotificationId;
+          let individualNotificationId: number | null = null;
 
-          if (existingAggregate.length > 0) {
-            // Update existing aggregated notification
-            aggregatedNotificationId = existingAggregate[0].id;
-            await tx
-              .update(aggregatedNotifications)
-              .set({
-                count: sql`${aggregatedNotifications.count} + 1`,
-                updatedAt: sql`now()`,
-              })
-              .where(eq(aggregatedNotifications.id, aggregatedNotificationId));
-          } else {
-            // Insert new aggregated notification
-            const insertedAggregate = await tx
-              .insert(aggregatedNotifications)
+          if (existingIndividual.length === 0) {
+            // ✅ Insert individual notification and return ID
+            const insertedIndividual = await tx
+              .insert(individualNotifications)
               .values({
+                userId,
                 ideaId,
+                actorId,
                 type,
-                count: 1,
+                message: messageText,
               })
-              .returning({ id: aggregatedNotifications.id });
-            aggregatedNotificationId = insertedAggregate[0].id;
+              .returning({ id: individualNotifications.id });
+
+            individualNotificationId = insertedIndividual[0].id;
+          } else {
+            individualNotificationId = existingIndividual[0].id;
           }
 
-          // Insert actor into `notificationActors` if not already present
+          // 🔹 Check and insert actor into `notificationActors`
           const existingActor = await tx
             .select()
             .from(notificationActors)
@@ -98,7 +127,7 @@ export const consumeMessages = async () => {
             });
           }
 
-          // Insert recipient into `notificationRecipients` if not already present
+          // 🔹 Check and insert recipient into `notificationRecipients`
           const existingRecipient = await tx
             .select()
             .from(notificationRecipients)
@@ -120,6 +149,10 @@ export const consumeMessages = async () => {
               isRead: false,
             });
           }
+
+          console.log(
+            `Notification processed for user ${userId}: Individual ID = ${individualNotificationId}, Aggregated ID = ${aggregatedNotificationId}`
+          );
         }
       });
 

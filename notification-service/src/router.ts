@@ -4,6 +4,7 @@ import {
   individualNotifications,
   aggregatedNotifications,
   notificationRecipients,
+  notificationActors,
 } from "./db/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { getUnreadCount, markAllAsRead } from "./redis_client";
@@ -48,7 +49,7 @@ router.get("/:userId?", async (req, res) => {
   try {
     const unreadCount = await getUnreadCount(userId);
 
-    // Fetch Aggregated Notifications with Read Status for the Recipient
+    // 🔹 Fetch Aggregated Notifications
     const aggregated = await db
       .select({
         id: aggregatedNotifications.id,
@@ -56,54 +57,72 @@ router.get("/:userId?", async (req, res) => {
         type: aggregatedNotifications.type,
         count: aggregatedNotifications.count,
         updatedAt: aggregatedNotifications.updatedAt,
-        isRead: sql<boolean>`CASE 
-                      WHEN ${notificationRecipients.isRead} IS NULL THEN false 
-                      ELSE ${notificationRecipients.isRead} 
-                    END`.as("is_read"),
+        isRead:
+          sql<boolean>`COALESCE(${notificationRecipients.isRead}, false)`.as(
+            "is_read"
+          ),
       })
       .from(aggregatedNotifications)
       .leftJoin(
         notificationRecipients,
-        and(
-          eq(aggregatedNotifications.id, notificationRecipients.notificationId),
-          eq(notificationRecipients.userId, +userId)
-        )
+        eq(aggregatedNotifications.id, notificationRecipients.notificationId)
       )
+      .where(eq(notificationRecipients.userId, +userId))
       .orderBy(desc(aggregatedNotifications.updatedAt))
       .limit(limit)
       .offset(offset);
 
-    // Fetch Individual Notifications
-    const individual = await db
-      .select()
-      .from(individualNotifications)
-      .where(eq(individualNotifications.userId, +userId))
-      .orderBy(desc(individualNotifications.createdAt))
-      .limit(limit)
-      .offset(offset);
+    // 🔹 Fetch Notification Actors (Users Who Engaged)
+    const actorsMap = new Map<number, number[]>(); // Map aggregatedNotificationId -> array of actorIds
+    const actors = await db
+      .select({
+        notificationId: notificationActors.notificationId,
+        actorId: notificationActors.actorId,
+      })
+      .from(notificationActors);
 
-    // Get total count
-    const totalAggregated = await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(notificationRecipients)
-      .where(eq(notificationRecipients.userId, +userId));
+    // Collect actor IDs per notification
+    actors.forEach(({ notificationId, actorId }) => {
+      if (!actorsMap.has(notificationId)) {
+        actorsMap.set(notificationId, []);
+      }
+      actorsMap.get(notificationId)!.push(actorId);
+    });
 
-    const totalIndividual = await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(individualNotifications)
-      .where(eq(individualNotifications.userId, +userId));
+    // 🔹 Transform Aggregated Notifications
+    const transformedAggregated = aggregated.map((notif) => {
+      const actorIds = actorsMap.get(notif.id) || [];
+      return {
+        id: `AGG-${notif.id}`, // Prefix with "AGG-"
+        category: "aggregated",
+        ideaId: notif.ideaId,
+        type: notif.type,
+        actorIds, // Store all actor userIds
+        message:
+          actorIds.length === 1
+            ? `User ${actorIds[0]} ${notif.type.toLowerCase()}d the idea`
+            : `User ${actorIds[0]} and ${
+                actorIds.length - 1
+              } others ${notif.type.toLowerCase()}d the idea`,
+        count: notif.count,
+        updatedAt: notif.updatedAt,
+        isRead: notif.isRead,
+      };
+    });
 
-    const total =
-      Number(totalAggregated[0].count) + Number(totalIndividual[0].count);
+    // ✅ Remove Individual Notifications from Response
+    const total = transformedAggregated.length;
 
     res.json({
       unreadCount: unreadCount || 0,
-      notifications: [...aggregated, ...individual],
+      notifications: transformedAggregated, // Only aggregated notifications
       total,
       hasMore: offset + limit < total,
     });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Internal error" });
   }
 });
+
 export default router;

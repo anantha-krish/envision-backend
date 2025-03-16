@@ -13,6 +13,7 @@ type KafkaUserMessage = {
   actorId: number;
   ideaId?: number;
   type?: string;
+  messageText: string;
 };
 
 const _sendKafkaUserEvent = async (
