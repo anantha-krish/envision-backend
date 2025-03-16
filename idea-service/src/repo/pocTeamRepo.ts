@@ -3,16 +3,12 @@ import { pocTeamMembers, pocTeams } from "../db/schema";
 import { eq } from "drizzle-orm";
 
 class PocTeamRepository {
-  createPocTeam = async (
-    name: string,
-    memberIds: number[],
-    ideaId?: number
-  ) => {
+  createPocTeam = async (name: string, memberIds: number[], ideaId: number) => {
     return await db.transaction(async (tx) => {
       // Insert team
       const [team] = await tx
         .insert(pocTeams)
-        .values({ name, ideaId: ideaId ?? null })
+        .values({ name, ideaId: ideaId })
         .returning({ id: pocTeams.id });
 
       // Insert members

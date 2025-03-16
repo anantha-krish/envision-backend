@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { approverRepo } from "../repository/approverTeamRepo";
+import { approverRepo } from "../src/repo/approverTeamRepo";
 
 export const assignApprovers = async (req: Request, res: Response) => {
   try {

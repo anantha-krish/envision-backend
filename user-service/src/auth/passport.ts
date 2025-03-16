@@ -1,10 +1,7 @@
 import dotenv from "dotenv";
-import { eq } from "drizzle-orm";
 import passport from "passport";
 import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
 import { ACCESS_TOKEN_SECRET } from "../config";
-import { db } from "../db/db.connection";
-import { users } from "../db/schema";
 import { userRepo } from "../repository/userRepo";
 dotenv.config();
 

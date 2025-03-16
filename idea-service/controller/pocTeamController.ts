@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { pocTeamRepo } from "../repository/pocTeamRepo";
+import { pocTeamRepo } from "../src/repo/pocTeamRepo";
 
 export const createPocTeam = async (req: Request, res: Response) => {
   try {

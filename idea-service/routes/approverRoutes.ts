@@ -4,7 +4,7 @@ import {
   getApprovers,
   getIdeas,
   removeApprover,
-} from "../controllers/approveController";
+} from "../controller/approveController";
 
 const router = Router();
 

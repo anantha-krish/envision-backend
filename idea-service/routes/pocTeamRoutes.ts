@@ -4,7 +4,7 @@ import {
   createPocTeam,
   getAllPocTeams,
   getTeamMembers,
-} from "../controllers/pocTeamController";
+} from "../controller/pocTeamController";
 
 const pocTeamRouter = express.Router();
 

@@ -1,6 +1,6 @@
-import { db } from "../db/db.connection";
 import { and, eq } from "drizzle-orm";
 import { ideaApprovers } from "../db/schema";
+import { db } from "../db/db.connection";
 
 class ApproverRepository {
   public async assignApproversToIdea(ideaId: number, approverIds: number[]) {
