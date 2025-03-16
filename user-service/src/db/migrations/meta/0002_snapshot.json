@@ -1,6 +1,6 @@
 {
-  "id": "6a1c0d43-e532-477a-8d80-ba74781a4ee5",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "f6d9c59e-2057-4935-8d7b-ba82ace79795",
+  "prevId": "97ffa07f-825b-4f15-8d31-92632aa44ff2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -155,14 +155,15 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false,
-          "default": "'user'"
+          "default": "'USER'"
         },
         "designation": {
           "name": "designation",
           "type": "designation",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'ENGINEER'"
         }
       },
       "indexes": {},
@@ -397,11 +398,11 @@
       "name": "user_role",
       "schema": "public",
       "values": [
-        "user",
-        "poc_team",
-        "manager",
-        "approver",
-        "admin"
+        "USER",
+        "POC_TEAM",
+        "MANAGER",
+        "APPROVER",
+        "ADMIN"
       ]
     }
   },

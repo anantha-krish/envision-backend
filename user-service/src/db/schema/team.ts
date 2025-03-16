@@ -1,21 +1,29 @@
-import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import {
+  integer,
+  pgTable,
+  serial,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { users } from "./user";
 
-// Teams Table
-export const teams = pgTable("teams", {
+// POC Teams Table (Each Idea can have only ONE POC team)
+export const pocTeams = pgTable("poc_teams", {
   id: serial("id").primaryKey(),
+  ideaId: integer("idea_id").unique(), // Can be NULL initially
   name: varchar("name", { length: 255 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Many-to-Many Relationship Table: user_team (Tracks which users belong to which teams)
-export const userTeam = pgTable("user_team", {
+// POC Team Members Table (Many members can be in a team, and a user can be in multiple teams)
+export const pocTeamMembers = pgTable("poc_team_members", {
   id: serial("id").primaryKey(),
-  userId: serial("user_id")
+  userId: integer("user_id")
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  teamId: serial("team_id")
+    .references(() => users.id, { onDelete: "cascade" }), // Ensuring user exists
+  teamId: integer("team_id")
     .notNull()
-    .references(() => teams.id, { onDelete: "cascade" }),
-  roleInTeam: varchar("role_in_team", { length: 100 }).default("member"), // Optional: Role within the team
+    .references(() => pocTeams.id, { onDelete: "cascade" }), // Linking to POC team
+  role: varchar("role", { length: 50 }).default("member"), // Role within the team (optional)
+  createdAt: timestamp("created_at").defaultNow(),
 });

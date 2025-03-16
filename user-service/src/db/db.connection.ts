@@ -7,4 +7,4 @@ const pool = new Pool({
   connectionString: DB_URL,
 });
 
-export const DB: NodePgDatabase<typeof schema> = drizzle(pool, { schema });
+export const db: NodePgDatabase<typeof schema> = drizzle(pool, { schema });

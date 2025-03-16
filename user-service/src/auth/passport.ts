@@ -3,8 +3,9 @@ import { eq } from "drizzle-orm";
 import passport from "passport";
 import { ExtractJwt, Strategy as JwtStrategy } from "passport-jwt";
 import { ACCESS_TOKEN_SECRET } from "../config";
-import { DB } from "../db/db.connection";
+import { db } from "../db/db.connection";
 import { users } from "../db/schema";
+import { userRepo } from "../repository/userRepo";
 dotenv.config();
 
 var opts = {
@@ -15,15 +16,7 @@ var opts = {
 passport.use(
   new JwtStrategy(opts, async (jwt_payload, done) => {
     try {
-      let user = await DB.query.users.findFirst({
-        columns: {
-          id: true,
-          email: true,
-          username: true,
-          role: true,
-        },
-        where: eq(users.id, jwt_payload.user_id),
-      });
+      let user = await userRepo.getUserByIdForJwtAuth(jwt_payload.user_id);
 
       if (!user) {
         throw new Error("User not found");

@@ -18,7 +18,16 @@ import {
 } from "../config";
 // Create User
 const createUser = async (req: Request, res: Response) => {
-  const { username, email, password, role } = req.body;
+  const {
+    username,
+    email,
+    password,
+    firstName,
+    lastName,
+    role,
+    designation,
+    managerId,
+  } = req.body;
 
   try {
     const hashedPassword = await hash(password, 10);
@@ -26,15 +35,19 @@ const createUser = async (req: Request, res: Response) => {
       username,
       email,
       hashedPassword,
-      role
+      firstName,
+      lastName,
+      role,
+      designation,
+      managerId
     );
-    var user = result[0];
+
     /* await sendKafkaUserEvent("USER_CREATED", {
       userId: user.id,
       userName: user.username,
     });
 */
-    res.json(user);
+    res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -54,17 +67,27 @@ const getUsers = async (req: Request, res: Response) => {
 // Update User
 const updateUser = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { username, email } = req.body;
+  const { username, email, firstName, lastName, role, designation, managerId } =
+    req.body;
 
   try {
-    const result = await userRepo.updateUser(parseInt(id), username, email);
+    const updatedUser = await userRepo.updateUser(
+      parseInt(id),
+      username,
+      email,
+      firstName,
+      lastName,
+      role,
+      designation,
+      managerId
+    );
 
     await sendUserUpdateEvent({
       userId: parseInt(id),
-      messageText: `User: ${username} Profile details has been updated`,
+      messageText: `User: ${username} profile details updated.`,
     });
 
-    res.json(result[0]);
+    res.json(updatedUser[0]);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

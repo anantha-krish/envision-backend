@@ -5,8 +5,22 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1741103014983,
-      "tag": "0000_dapper_shadow_king",
+      "when": 1742103743388,
+      "tag": "0000_loud_korvac",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1742104015097,
+      "tag": "0001_lumpy_goliath",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1742104982549,
+      "tag": "0002_freezing_silver_sable",
       "breakpoints": true
     }
   ]
