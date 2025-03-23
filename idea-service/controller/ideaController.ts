@@ -17,14 +17,20 @@ export const createIdea = async (req: Request, res: Response) => {
     res.status(400).json({ error: "Missing required fields" });
     return;
   }
-
+  var userId = Number(req.headers.user_id ?? 0);
+  var updatedSubmittedBy: number[] = submittedBy;
   try {
+    if (updatedSubmittedBy.length == 0) {
+      updatedSubmittedBy = [userId];
+    } else if (!submittedBy.includes[userId]) {
+      updatedSubmittedBy = [userId, ...updatedSubmittedBy];
+    }
     const result = await ideaRepo.createIdea(
       title,
       summary,
       description,
-      statusId,
       managerId,
+      statusId,
       tags || [],
       submittedBy?.length > 0 ? submittedBy : [req.headers.user_id]
     );
@@ -66,5 +72,46 @@ export const updateIdea = async (req: Request, res: Response) => {
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+};
+export const getIdeaDetails = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const result = await ideaRepo.getIdeaById(Number(id));
+    if (!result) {
+      res.status(404).json({ error: "Idea not found" });
+      return;
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateIdeaStatus = async (req: Request, res: Response) => {
+  try {
+    const ideaId = Number(req.params.id ?? "-1");
+    const { statusId } = req.body;
+
+    if (!ideaId || !statusId) {
+      res.status(400).json({ error: "ideaId and statusId are required" });
+      return;
+    }
+
+    const updatedIdea = await ideaRepo.updateIdeaStatus(ideaId, statusId);
+
+    if (!updatedIdea) {
+      res.status(404).json({ error: "Idea not found" });
+      return;
+    }
+
+    res
+      .status(200)
+      .json({ message: "Idea status updated successfully", idea: updatedIdea });
+  } catch (error) {
+    console.error("Error updating idea status:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+    return;
   }
 };

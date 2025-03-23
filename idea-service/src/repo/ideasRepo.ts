@@ -1,6 +1,20 @@
 import { db } from "../db/db.connection";
-import { ideas, ideaStatus, ideaTags, tags } from "../db/schema";
+import {
+  ideas,
+  ideaStatus,
+  ideaSubmitters,
+  ideaTags,
+  tags,
+} from "../db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
+import {
+  delValue,
+  getAllIdeasKeys,
+  getValue,
+  getViews,
+  incrementViews,
+  mgetViews,
+} from "../redis_client";
 
 class IdeaRepository {
   async createIdea(
@@ -21,17 +35,33 @@ class IdeaRepository {
         managerId,
         statusId,
       })
-      .returning();
+      .returning({
+        ideaId: ideas.id,
+        title: ideas.title,
+        summary: ideas.summary,
+        description: ideas.description,
+        managerId: ideas.managerId,
+        statusId: ideas.statusId,
+      });
 
     const idea = result[0];
 
     // Insert tags if provided
     if (tags.length > 0) {
       var tagValues = tags.map((tag) => ({
-        ideaId: idea.id,
+        ideaId: idea.ideaId,
         tagId: tag, // Assuming tag is the tagId
       }));
       await db.insert(ideaTags).values(tagValues);
+    }
+
+    if (submittedBy.length > 0) {
+      await db.insert(ideaSubmitters).values(
+        submittedBy.map((userId) => ({
+          ideaId: idea.ideaId,
+          userId,
+        }))
+      );
     }
 
     return idea;
@@ -62,9 +92,17 @@ class IdeaRepository {
       .innerJoin(tags, eq(ideaTags.tagId, tags.id))
       .where(eq(ideaTags.ideaId, ideaId));
 
+    const submittedByResults = await db
+      .select({ userId: ideaSubmitters.userId })
+      .from(ideaSubmitters)
+      .where(eq(ideaSubmitters.ideaId, ideaId));
+
+    incrementViews(ideaId);
+
     return {
       ...ideaResult[0],
-      tags: tagResults.map((tag) => tag.name).join(", "), // Convert to string
+      tags: tagResults.map((tag) => tag.name) || [], // Convert to string
+      submittedBy: submittedByResults.map((s) => s.userId),
     };
   }
 
@@ -138,46 +176,83 @@ class IdeaRepository {
   async getAllIdeas(page: number, pageSize: number = 10) {
     const offset = (page - 1) * pageSize; // Pagination offset
 
-    // Fetch ideas with tags using a JOIN
-    const ideaResults = await db
+    // Step 1: Fetch only ideas (without joins)
+    const ideasList = await db
       .select({
         id: ideas.id,
         title: ideas.title,
         summary: ideas.summary,
-        tagName: tags.name, // Fetch tag names directly
-        views: ideas.views,
+        status: ideaStatus.name,
       })
       .from(ideas)
-      .leftJoin(ideaTags, eq(ideaTags.ideaId, ideas.id)) // Join ideaTags table
-      .leftJoin(tags, eq(ideaTags.tagId, tags.id)) // Join tags table
+      .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id))
       .limit(pageSize)
       .offset(offset);
 
-    // Group ideas and their associated tags
-    const ideaMap: Record<
-      number,
-      {
-        id: number;
-        title: string;
-        summary: string;
-        tags: string[];
-        views: number;
-      }
-    > = {};
+    if (ideasList.length === 0) return []; // Return early if no ideas found
 
-    ideaResults.forEach(({ id, title, summary, tagName, views }) => {
-      if (!ideaMap[id]) {
-        ideaMap[id] = { id, title, summary, tags: [], views: views ?? 0 };
-      }
-      if (tagName) {
-        ideaMap[id].tags.push(tagName);
-      }
+    // Step 2: Fetch tags separately for retrieved ideas
+    const ideaIds = ideasList.map((idea) => idea.id);
+
+    const tagResults = await db
+      .select({
+        ideaId: ideaTags.ideaId,
+        tagName: tags.name,
+      })
+      .from(ideaTags)
+      .innerJoin(tags, eq(ideaTags.tagId, tags.id))
+      .where(inArray(ideaTags.ideaId, ideaIds));
+
+    // Step 3: Fetch views from Redis in bulk
+    const viewCounts = await mgetViews(ideaIds);
+
+    // Step 4: Combine results efficiently
+    const tagsMap: Record<number, string[]> = {};
+    tagResults.forEach(({ ideaId, tagName }) => {
+      if (!tagsMap[ideaId]) tagsMap[ideaId] = [];
+      tagsMap[ideaId].push(tagName);
     });
 
-    return Object.values(ideaMap).map((idea) => ({
+    const finalResults = ideasList.map((idea, index) => ({
       ...idea,
-      tags: idea.tags.join(", "), // Convert array to comma-separated string
+      tags: tagsMap[idea.id] || [], // Convert array to string
+      views: viewCounts[index] ? parseInt(viewCounts[index] || "0") : 0, // Parse Redis views
     }));
+
+    return finalResults;
+  }
+
+  async getViews(ideaId: number): Promise<number> {
+    const redisViews = await getViews(ideaId);
+
+    if (redisViews !== null) {
+      return parseInt(redisViews);
+    }
+
+    // If not in Redis, fetch from DB
+    const result = await db
+      .select({ views: ideas.views })
+      .from(ideas)
+      .where(eq(ideas.id, ideaId));
+
+    return result[0]?.views || 0;
+  }
+  async syncViewsToDB() {
+    const keys = await getAllIdeasKeys();
+
+    for (const key of keys) {
+      const ideaId = parseInt(key.split(":")[1]); // Extract ID
+      const views = await getValue(key);
+
+      if (views) {
+        await db
+          .update(ideas)
+          .set({ views: parseInt(views) })
+          .where(eq(ideas.id, ideaId));
+
+        await delValue(key); // Clear Redis after sync
+      }
+    }
   }
 }
 

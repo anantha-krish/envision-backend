@@ -4,9 +4,21 @@ import ideaRouter from "./routes/ideaRoutes";
 import teamsRouter from "./routes/pocTeamRoutes";
 import { SERVER_PORT } from "./src/config";
 import { registerService } from "./src/redis_client";
+import { ideaRepo } from "./src/repo/ideasRepo";
 
 const app = express();
 
+const syncViews = async () => {
+  try {
+    console.log("Syncing views from Redis to DB...");
+    await ideaRepo.syncViewsToDB();
+  } catch (err) {
+    console.error("Error syncing views:", err);
+  }
+};
+
+// Run every 5 minutes
+setInterval(syncViews, 5 * 60 * 1000);
 //app.use(cors());
 app.use(express.json());
 

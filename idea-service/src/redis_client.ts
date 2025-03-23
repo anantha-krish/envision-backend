@@ -14,3 +14,17 @@ export const registerService = async () => {
     `Registered ${SERVICE_NAME} service at http://${SERVER_HOST}:${SERVER_PORT}`
   );
 };
+
+export const incrementViews = async (ideaId: number) => {
+  await redis.incr(`idea_views:${ideaId}`);
+};
+export const getViews = async (ideaId: number) =>
+  await redis.get(`idea_views:${ideaId}`);
+
+export const mgetViews = async (ideaIds: number[]) =>
+  await redis.mget([...ideaIds].map((id) => `idea_views:${id}`));
+
+export const getAllIdeasKeys = async () => await redis.keys("idea_views:*");
+
+export const getValue = async (key: string) => await redis.get(key);
+export const delValue = async (key: string) => await redis.del(key);
