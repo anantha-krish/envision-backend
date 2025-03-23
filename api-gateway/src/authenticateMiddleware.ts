@@ -1,6 +1,8 @@
 import dotnenv from "dotenv";
 import { Request, Response, NextFunction } from "express";
+import { createProxyMiddleware } from "http-proxy-middleware";
 import jwt from "jsonwebtoken";
+import { getNextService } from "./app";
 dotnenv.configDotenv();
 export const ACCESS_TOKEN_SECRET =
   process.env.ACCESS_TOKEN_SECRET || "my_secret";
@@ -74,3 +76,23 @@ export const authenticateAndAuthorize = async (
     return res.status(403).json({ error: "Access Denied" });
   }*/
 };
+
+async function proxyRequest(
+  serviceName: string,
+  req,
+  res,
+  next,
+  pathRewrite = "/api"
+) {
+  const target = await getNextService(serviceName);
+  if (!target) {
+    return res.status(502).json({ error: "Service unavailable" });
+  }
+
+  createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    secure: false,
+    pathRewrite: { [`^/${serviceName}`]: pathRewrite },
+  })(req, res, next);
+}

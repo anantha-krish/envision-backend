@@ -9,9 +9,28 @@ dotenv.config();
 
 const app = express();
 
-// Define microservice routes
-const routes: { [key: string]: string } = {
-  "/users": "http://localhost:5000",
+const proxyRequest = async (
+  serviceName: string,
+  req,
+  res,
+  next,
+  pathRewrite = "/api"
+) => {
+  var target = await getNextService(serviceName);
+  if (serviceName === "auth") {
+    target = await getNextService("users");
+  }
+
+  if (!target) {
+    return res.status(502).json({ error: "Service unavailable" });
+  }
+
+  createProxyMiddleware({
+    target,
+    changeOrigin: true,
+    secure: false,
+    pathRewrite: { [`^/${serviceName}`]: pathRewrite },
+  })(req, res, next);
 };
 
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
@@ -19,7 +38,9 @@ const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 const serviceIndex: { [key: string]: number } = {};
 
 // Round-robin load balancing
-async function getNextService(serviceName: string): Promise<string | null> {
+export const getNextService = async (
+  serviceName: string
+): Promise<string | null> => {
   const serviceList = await redis.smembers(`services:${serviceName}`);
   if (serviceList.length === 0) return null;
 
@@ -29,7 +50,7 @@ async function getNextService(serviceName: string): Promise<string | null> {
 
   serviceIndex[serviceName] += 1;
   return selectedService;
-}
+};
 
 app.get("/redis", async (req: Request, res: Response) => {
   try {
@@ -68,6 +89,30 @@ app.get("/redis", async (req: Request, res: Response) => {
   }
 });
 // Proxy Requests Dynamically
+app.use(async (req, res, next) => {
+  try {
+    const serviceName = req.path.split("/")[1]; // Extract microservice name
+
+    if (serviceName === "auth") {
+      // Directly forward auth requests without authentication
+      return proxyRequest(serviceName, req, res, next, "/api/auth");
+    }
+
+    if (serviceName === "users") {
+      return proxyRequest(serviceName, req, res, next);
+    }
+
+    // Authenticate for all other services and protected user routes
+    await authenticateAndAuthorize(req, res, next);
+
+    // Forward the request after authentication
+    proxyRequest(serviceName, req, res, next);
+  } catch (error) {
+    console.error("Gateway error:", error);
+    res.status(500).json({ error: "Internal gateway error" });
+  }
+});
+/*
 app.use(
   (req, res, next) => {
     const serviceName = req.path.split("/")[1]; // Extract microservice name
@@ -89,7 +134,7 @@ app.use(
       })(req, res, next);
     }
   }
-);
+);*/
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
