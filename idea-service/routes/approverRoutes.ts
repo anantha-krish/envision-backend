@@ -2,15 +2,15 @@ import { Router } from "express";
 import {
   assignApprovers,
   getApprovers,
-  getIdeas,
+  getIdeasAssignedForApproval,
   removeApprover,
 } from "../controller/approveController";
 
 const router = Router();
 
-router.post("/approvers/assign", assignApprovers);
-router.delete("/approvers/remove", removeApprover);
-router.get("/approvers/:ideaId", getApprovers);
-router.get("/approver-ideas/:userId", getIdeas);
+router.post("assign", assignApprovers);
+router.delete("remove", removeApprover);
+router.get(":ideaId", getApprovers);
+router.get("/assigned-ideas/:userId", getIdeasAssignedForApproval);
 
 export default router;

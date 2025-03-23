@@ -3,7 +3,15 @@ import { ideaRepo } from "../src/repo/ideasRepo";
 
 // Create an idea
 export const createIdea = async (req: Request, res: Response) => {
-  const { title, summary, description, statusId, tags } = req.body;
+  const {
+    title,
+    summary,
+    description,
+    statusId,
+    tags,
+    managerId,
+    submittedBy,
+  } = req.body;
 
   if (!title || !summary || !description || !statusId) {
     res.status(400).json({ error: "Missing required fields" });
@@ -16,7 +24,9 @@ export const createIdea = async (req: Request, res: Response) => {
       summary,
       description,
       statusId,
-      tags || []
+      managerId,
+      tags || [],
+      submittedBy?.length > 0 ? submittedBy : [req.headers.user_id]
     );
     res.status(201).json(result);
   } catch (error: any) {
@@ -25,9 +35,11 @@ export const createIdea = async (req: Request, res: Response) => {
 };
 
 // Get all ideas
-export const getAllIdeas = async (_req: Request, res: Response) => {
+export const getAllIdeas = async (req: Request, res: Response) => {
   try {
-    const results = await ideaRepo.getAllIdeas();
+    const page = Number(req.query.page) ?? 1;
+    const pageSize = Number(req.query.pageSize ?? 10);
+    const results = await ideaRepo.getAllIdeas(page, pageSize);
     res.json(results);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -40,15 +52,16 @@ export const updateIdea = async (req: Request, res: Response) => {
   const { title, summary, description, statusId, tags } = req.body;
 
   try {
-    const result = await ideaRepo.updateIdea(
+    const result = await ideaRepo.updateIdeaContent(
       Number(id),
       title,
       summary,
-      description,
-      statusId,
-      tags
+      description
     );
-    if (!result) return res.status(404).json({ error: "Idea not found" });
+    if (!result) {
+      res.status(404).json({ error: "Idea not found" });
+      return;
+    }
 
     res.json(result);
   } catch (error: any) {

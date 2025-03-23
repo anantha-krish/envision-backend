@@ -1,6 +1,6 @@
 import { db } from "../db/db.connection";
 import { ideas, ideaStatus, ideaTags, tags } from "../db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 class IdeaRepository {
   async createIdea(
@@ -9,7 +9,7 @@ class IdeaRepository {
     description: string,
     managerId: number,
     statusId: number,
-    tags: string[],
+    tags: number[],
     submittedBy: number[]
   ) {
     const result = await db
@@ -27,40 +27,45 @@ class IdeaRepository {
 
     // Insert tags if provided
     if (tags.length > 0) {
-      await db.insert(ideaTags).values(
-        tags.map((tag) => ({
-          ideaId: idea.id,
-          tagId: tag, // Assuming tag is the tagId
-        }))
-      );
+      var tagValues = tags.map((tag) => ({
+        ideaId: idea.id,
+        tagId: tag, // Assuming tag is the tagId
+      }));
+      await db.insert(ideaTags).values(tagValues);
     }
 
     return idea;
   }
 
   async getIdeaById(ideaId: number) {
-    const result = await db
+    const ideaResult = await db
       .select({
         id: ideas.id,
         title: ideas.title,
         summary: ideas.summary,
         description: ideas.description,
-        status: ideaStatus.name, // Get status text instead of ID
+        status: ideaStatus.name, // Get status text
         managerId: ideas.managerId,
         createdAt: ideas.createdAt,
         updatedAt: ideas.updatedAt,
-        tags: db
-          .select({ name: tags.name })
-          .from(ideaTags)
-          .innerJoin(tags, eq(ideaTags.tagId, tags.id))
-          .where(eq(ideaTags.ideaId, ideaId))
-          .then((results) => results.map((row) => row.name).join(",")),
       })
       .from(ideas)
-      .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id)) // Join status table
+      .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id))
       .where(eq(ideas.id, ideaId));
 
-    return result[0] ?? null; // Return first
+    if (!ideaResult.length) return null; // Return null if idea not found
+
+    // Fetch associated tags
+    const tagResults = await db
+      .select({ name: tags.name })
+      .from(ideaTags)
+      .innerJoin(tags, eq(ideaTags.tagId, tags.id))
+      .where(eq(ideaTags.ideaId, ideaId));
+
+    return {
+      ...ideaResult[0],
+      tags: tagResults.map((tag) => tag.name).join(", "), // Convert to string
+    };
   }
 
   async deleteIdea(ideaId: number) {
@@ -128,6 +133,51 @@ class IdeaRepository {
       .set(updateFields)
       .where(eq(ideas.id, ideaId))
       .returning();
+  }
+
+  async getAllIdeas(page: number, pageSize: number = 10) {
+    const offset = (page - 1) * pageSize; // Pagination offset
+
+    // Fetch ideas with tags using a JOIN
+    const ideaResults = await db
+      .select({
+        id: ideas.id,
+        title: ideas.title,
+        summary: ideas.summary,
+        tagName: tags.name, // Fetch tag names directly
+        views: ideas.views,
+      })
+      .from(ideas)
+      .leftJoin(ideaTags, eq(ideaTags.ideaId, ideas.id)) // Join ideaTags table
+      .leftJoin(tags, eq(ideaTags.tagId, tags.id)) // Join tags table
+      .limit(pageSize)
+      .offset(offset);
+
+    // Group ideas and their associated tags
+    const ideaMap: Record<
+      number,
+      {
+        id: number;
+        title: string;
+        summary: string;
+        tags: string[];
+        views: number;
+      }
+    > = {};
+
+    ideaResults.forEach(({ id, title, summary, tagName, views }) => {
+      if (!ideaMap[id]) {
+        ideaMap[id] = { id, title, summary, tags: [], views: views ?? 0 };
+      }
+      if (tagName) {
+        ideaMap[id].tags.push(tagName);
+      }
+    });
+
+    return Object.values(ideaMap).map((idea) => ({
+      ...idea,
+      tags: idea.tags.join(", "), // Convert array to comma-separated string
+    }));
   }
 }
 

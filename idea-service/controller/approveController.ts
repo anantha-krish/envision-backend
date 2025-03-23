@@ -54,7 +54,10 @@ export const getApprovers = async (req: Request, res: Response) => {
   }
 };
 
-export const getIdeas = async (req: Request, res: Response) => {
+export const getIdeasAssignedForApproval = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { userId } = req.params;
     if (!userId) {
