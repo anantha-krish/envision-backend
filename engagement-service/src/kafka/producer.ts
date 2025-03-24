@@ -1,13 +1,13 @@
 import { Kafka, logLevel } from "kafkajs";
 import { KAFKA_BROKER } from "../config";
 
-const kafka = new Kafka({
+export const kafka = new Kafka({
   clientId: "engagement-service",
   brokers: [KAFKA_BROKER || "localhost:9092"],
   logLevel: logLevel.ERROR,
 });
 
-const producer = kafka.producer();
+export const producer = kafka.producer();
 
 type KafkaUserMessage = {
   actorId: number;
@@ -29,14 +29,24 @@ const _sendKafkaUserEvent = async (
   await producer.disconnect();
 };
 
-export const sendNewLikeEvent = async (data: KafkaUserMessage) =>
+export const sendNewLikeEvent = async (data: KafkaUserMessage) => {
+  await _sendKafkaUserEvent("engagement-events", "LIKE", {
+    type: "LIKE",
+    ...data,
+  });
   await _sendKafkaUserEvent("notify-engagement", "NEW_LIKE_EVENT", {
     type: "LIKE",
     ...data,
   });
+};
 
-export const sendNewCommentEvent = async (data: KafkaUserMessage) =>
+export const sendNewCommentEvent = async (data: KafkaUserMessage) => {
+  await _sendKafkaUserEvent("engagement-events", "COMMENT", {
+    type: "COMMENT",
+    ...data,
+  });
   await _sendKafkaUserEvent("notify-engagement", "NEW_COMMENT_EVENT", {
     type: "COMMENT",
     ...data,
   });
+};

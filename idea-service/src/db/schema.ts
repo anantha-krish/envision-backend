@@ -16,8 +16,8 @@ export const ideas = pgTable("ideas", {
   statusId: integer("status_id").notNull(),
   managerId: integer("manager_id"),
   views: integer("views").default(0), // Store total
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const ideaStatus = pgTable("idea_status", {

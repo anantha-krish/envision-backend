@@ -42,6 +42,7 @@ class IdeaRepository {
         description: ideas.description,
         managerId: ideas.managerId,
         statusId: ideas.statusId,
+        createdAt: ideas.createdAt,
       });
 
     const idea = result[0];
@@ -238,21 +239,67 @@ class IdeaRepository {
     return result[0]?.views || 0;
   }
   async syncViewsToDB() {
-    const keys = await getAllIdeasKeys();
+    console.log("🔄 Syncing views from Redis to DB...");
 
-    for (const key of keys) {
-      const ideaId = parseInt(key.split(":")[1]); // Extract ID
-      const views = await getValue(key);
+    // Step 1: Fetch all idea IDs stored in Redis
+    const ideaIds = (await getAllIdeasKeys()).map((id) => Number(id));
 
-      if (views) {
-        await db
-          .update(ideas)
-          .set({ views: parseInt(views) })
-          .where(eq(ideas.id, ideaId));
+    if (ideaIds.length === 0) {
+      console.log("✅ No views to sync.");
+      return;
+    }
 
-        await delValue(key); // Clear Redis after sync
+    // Step 2: Get views from Redis in bulk
+    const viewCounts = await mgetViews(ideaIds);
+
+    // Step 3: Fetch existing views from the database
+    const existingViews = await db
+      .select({
+        ideaId: ideas.id,
+        views: ideas.views, // Existing views column
+      })
+      .from(ideas)
+      .where(
+        inArray(
+          ideas.id,
+          ideaIds.map((id) => parseInt(id.toString().split(":")[1]))
+        )
+      );
+
+    // Convert existing views to a map for quick lookup
+    const existingViewsMap = Object.fromEntries(
+      existingViews.map((row) => [row.ideaId, row.views])
+    );
+
+    // Step 4: Update only if Redis views are higher
+    const updates: { id: number; views: number }[] = [];
+    for (let i = 0; i < ideaIds.length; i++) {
+      const ideaId = parseInt(ideaIds[i].toString().split(":")[1]);
+      const redisViews = parseInt(viewCounts[i] || "0", 10);
+      const dbViews = existingViewsMap[ideaId] || 0;
+
+      if (redisViews > dbViews) {
+        updates.push({
+          id: ideaId,
+          views: redisViews, // Use max(redisViews, dbViews)
+        });
       }
     }
+
+    // Step 5: Bulk update views in the database
+    if (updates.length > 0) {
+      await db.transaction(async (tx) => {
+        for (const { id, views } of updates) {
+          await tx.update(ideas).set({ views }).where(eq(ideas.id, id));
+        }
+      });
+      console.log(`✅ Synced ${updates.length} views to DB.`);
+    } else {
+      console.log("✅ No updates needed.");
+    }
+
+    // Optional: Clear Redis views after syncing
+    await delValue(ideaIds.map(toString));
   }
 }
 

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { ideaRepo } from "../src/repo/ideasRepo";
+import { storeIdeaCreation } from "../src/redis_client";
 
 // Create an idea
 export const createIdea = async (req: Request, res: Response) => {
@@ -34,6 +35,10 @@ export const createIdea = async (req: Request, res: Response) => {
       tags || [],
       submittedBy?.length > 0 ? submittedBy : [req.headers.user_id]
     );
+    await storeIdeaCreation(
+      result.ideaId,
+      result.createdAt?.toDateString() ?? "0"
+    );
     res.status(201).json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -46,7 +51,7 @@ export const getAllIdeas = async (req: Request, res: Response) => {
     const page = Number(req.query.page) ?? 1;
     const pageSize = Number(req.query.pageSize ?? 10);
     const results = await ideaRepo.getAllIdeas(page, pageSize);
-    res.json(results);
+    res.status(200).json(results);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

@@ -3,8 +3,14 @@ import dotenv from "dotenv";
 import engagementRoutes from "./src/routes/engagement";
 import { SERVER_PORT } from "./src/config";
 import { registerService } from "./src/redis_client";
+import {
+  processEngagementEvents,
+  processEngagementRequest,
+} from "./src/kafka/consumer";
 
 const app = express();
+//processEngagementRequest();
+//processEngagementEvents();
 app.use(express.json());
 app.use("/api/", engagementRoutes);
 registerService();

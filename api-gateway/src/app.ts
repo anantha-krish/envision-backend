@@ -88,6 +88,7 @@ app.get("/redis", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+/*
 // Proxy Requests Dynamically
 app.use(async (req, res, next) => {
   try {
@@ -112,7 +113,7 @@ app.use(async (req, res, next) => {
     res.status(500).json({ error: "Internal gateway error" });
   }
 });
-/*
+*/
 app.use(
   (req, res, next) => {
     const serviceName = req.path.split("/")[1]; // Extract microservice name
@@ -134,7 +135,7 @@ app.use(
       })(req, res, next);
     }
   }
-);*/
+);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

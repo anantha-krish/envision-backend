@@ -4,7 +4,6 @@ import "./src/auth/passport";
 import { SERVER_PORT } from "./src/config";
 import { registerService } from "./src/redis_client";
 import userRoutes from "./src/routes/userRoutes";
-import authRoutes from "./src/routes/authRoutes";
 
 const app = express();
 
@@ -15,7 +14,6 @@ app.use(express.json());
 registerService();
 // Register every 30 seconds to ensure availability
 setInterval(registerService, 30000);
-app.use("/api/auth/", authRoutes);
 app.use("/api/", userRoutes);
 
 app.listen(SERVER_PORT, () =>
