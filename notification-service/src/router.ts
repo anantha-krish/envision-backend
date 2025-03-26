@@ -28,7 +28,7 @@ router.post("/mark-read/:userId?", async (req: Request, res: Response) => {
       // Mark aggregated notifications as read for this user
       await tx
         .update(notificationRecipients)
-        .set({ isRead: true, updatedAt: sql`now()` })
+        .set({ isRead: true })
         .where(eq(notificationRecipients.userId, +userId));
     });
 

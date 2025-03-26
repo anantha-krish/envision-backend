@@ -13,7 +13,9 @@ export const ideas = pgTable("ideas", {
   title: varchar("title", { length: 255 }).notNull(),
   summary: varchar("summary", { length: 500 }).notNull(),
   description: varchar("description").notNull(), // Stored in HTML format
-  statusId: integer("status_id").notNull(),
+  statusId: integer("status_id")
+    .notNull()
+    .references(() => ideaStatus.id, { onDelete: "set null" }),
   managerId: integer("manager_id"),
   views: integer("views").default(0), // Store total
   createdAt: timestamp("created_at").notNull().defaultNow(),

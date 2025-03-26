@@ -30,7 +30,7 @@ export const aggregatedNotifications = pgTable("aggregated_notifications", {
 
 export const notificationActors = pgTable("notification_actors", {
   id: serial("id").primaryKey(),
-  notificationId: integer("notification_id")
+  notificationId: integer("agg_notification_id")
     .notNull()
     .references(() => aggregatedNotifications.id, { onDelete: "cascade" }),
   actorId: integer("actor_id").notNull(), // Each user who engaged
@@ -39,10 +39,9 @@ export const notificationActors = pgTable("notification_actors", {
 
 export const notificationRecipients = pgTable("notification_recipients", {
   id: serial("id").primaryKey(),
-  notificationId: integer("notification_id")
+  notificationId: integer("agg_notification_id")
     .notNull()
     .references(() => aggregatedNotifications.id, { onDelete: "cascade" }),
-  userId: integer("user_id").notNull(), // Recipient of the notification
+  userId: integer("user_id").notNull(),
   isRead: boolean("is_read").default(false),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });

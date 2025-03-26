@@ -8,6 +8,41 @@
       "when": 1742708779874,
       "tag": "0000_perfect_blockbuster",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1742953452190,
+      "tag": "0001_daily_luckman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1742953681138,
+      "tag": "0002_organic_prowler",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1742953737814,
+      "tag": "0003_real_penance",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1742953864470,
+      "tag": "0004_nappy_spencer_smythe",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1742954053934,
+      "tag": "0005_absurd_johnny_blaze",
+      "breakpoints": true
     }
   ]
 }

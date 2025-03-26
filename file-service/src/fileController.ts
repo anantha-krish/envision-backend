@@ -26,7 +26,7 @@ export const uploadFileHandler = async (
       ideaId,
       req.files as Express.Multer.File[]
     );
-    res.json({ message: "Files uploaded successfully!", fileUrls });
+    res.status(201).json({ message: "Files uploaded successfully!", fileUrls });
   } catch (error) {
     res.status(500).json({ error: "File upload failed!" });
   }

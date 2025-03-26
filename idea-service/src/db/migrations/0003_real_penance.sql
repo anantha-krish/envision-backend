@@ -1,0 +1,3 @@
+ALTER TABLE "ideas" DROP CONSTRAINT "ideas_status_id_idea_status_id_fk";
+--> statement-breakpoint
+ALTER TABLE "ideas" ADD CONSTRAINT "ideas_status_id_idea_status_id_fk" FOREIGN KEY ("status_id") REFERENCES "public"."idea_status"("id") ON DELETE no action ON UPDATE no action;
