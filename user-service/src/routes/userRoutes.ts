@@ -20,6 +20,6 @@ router.patch("/:id", authenticateJwt, updateUser);
 router.delete("/:id", authenticateJwt, deleteUser);
 router.post("/login", loginUser);
 router.get("/logout", authenticateJwt, logOut);
-router.get("/refresh", refreshAccessToken);
+router.post("/refresh", refreshAccessToken);
 
 export default router;
