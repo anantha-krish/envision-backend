@@ -260,12 +260,7 @@ class IdeaRepository {
         views: ideas.views, // Existing views column
       })
       .from(ideas)
-      .where(
-        inArray(
-          ideas.id,
-          ideaIds.map((id) => parseInt(id.toString().split(":")[1]))
-        )
-      );
+      .where(inArray(ideas.id, ideaIds));
 
     // Convert existing views to a map for quick lookup
     const existingViewsMap = Object.fromEntries(
@@ -275,8 +270,8 @@ class IdeaRepository {
     // Step 4: Update only if Redis views are higher
     const updates: { id: number; views: number }[] = [];
     for (let i = 0; i < ideaIds.length; i++) {
-      const ideaId = parseInt(ideaIds[i].toString().split(":")[1]);
-      const redisViews = parseInt(viewCounts[i] || "0", 10);
+      const ideaId = ideaIds[i];
+      const redisViews = parseInt(viewCounts[i] || "0");
       const dbViews = existingViewsMap[ideaId] || 0;
 
       if (redisViews > dbViews) {

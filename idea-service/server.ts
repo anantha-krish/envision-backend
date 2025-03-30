@@ -17,8 +17,8 @@ const syncViews = async () => {
   }
 };
 
-// Run every 5 minutes
-setInterval(syncViews, 5 * 60 * 1000);
+// Run every 2 minutes
+setInterval(syncViews, 2 * 60 * 1000);
 //app.use(cors());
 app.use(express.json());
 

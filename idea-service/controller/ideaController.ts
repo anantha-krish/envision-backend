@@ -48,7 +48,7 @@ export const createIdea = async (req: Request, res: Response) => {
 // Get all ideas
 export const getAllIdeas = async (req: Request, res: Response) => {
   try {
-    const page = Number(req.query.page) ?? 1;
+    const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 10);
     const results = await ideaRepo.getAllIdeas(page, pageSize);
     res.status(200).json(results);
