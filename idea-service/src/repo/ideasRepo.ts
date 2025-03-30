@@ -242,7 +242,8 @@ class IdeaRepository {
     console.log("🔄 Syncing views from Redis to DB...");
 
     // Step 1: Fetch all idea IDs stored in Redis
-    const ideaIds = (await getAllIdeasKeys()).map((id) => Number(id));
+    const ideaKeys = await getAllIdeasKeys();
+    const ideaIds = ideaKeys.map((id) => parseInt(id.split(":")[1]));
 
     if (ideaIds.length === 0) {
       console.log("✅ No views to sync.");
