@@ -1,4 +1,4 @@
-import { kafka } from "./kafka/kafka";
+import { kafka } from "./kafka";
 import { EventEmitter } from "events";
 
 const producer = kafka.producer();

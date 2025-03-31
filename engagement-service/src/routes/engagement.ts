@@ -4,6 +4,7 @@ import { likes, comments } from "../db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { sendNewCommentEvent, sendNewLikeEvent } from "../kafka/producer";
+import { fetchEngagementMetrics } from "../repo";
 
 const router = Router();
 
@@ -110,23 +111,7 @@ router.get("/metrics", async (req: Request, res: Response) => {
       res.status(400).json({ error: "Missing or invalid ideaIds parameter" });
       return;
     }
-
-    const metrics = await db
-      .select({
-        ideaId: likes.ideaId,
-        likes: sql<number>`COUNT(DISTINCT ${likes.userId})`.as("likes"),
-        comments: sql<number>`COUNT(DISTINCT ${comments.id})`.as("comments"),
-      })
-      .from(likes)
-      .leftJoin(comments, sql`${comments.ideaId} = ${likes.ideaId}`)
-      .where(inArray(likes.ideaId, ideaIds))
-      .groupBy(likes.ideaId);
-
-    const metricsMap = metrics.reduce((acc, row) => {
-      acc[row.ideaId] = { likes: row.likes, comments: row.comments };
-      return acc;
-    }, {} as Record<number, { likes: number; comments: number }>);
-
+    var metricsMap = await fetchEngagementMetrics(ideaIds);
     res.json(metricsMap);
   } catch (error) {
     console.error("Error fetching engagement metrics:", error);

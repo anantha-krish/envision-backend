@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ideaRepo } from "../src/repo/ideasRepo";
 import { mgetViews, storeIdeaCreation } from "../src/redis_client";
-import { getEngagementMetrics } from "../src/api";
+import { getEngagementMetrics } from "../src/kafka/engagementAsync";
 
 // Create an idea
 export const createIdea = async (req: Request, res: Response) => {
@@ -78,16 +78,12 @@ export const getAllIdeas = async (req: Request, res: Response) => {
     });
 
     const finalResults = ideasList.map((idea, index) => {
-      var engagement = engagementMetrics.find(
-        (item) => item.ideaId === idea.id
-      );
-
       return {
         ...idea,
         tags: tagsMap[idea.id] || [],
         views: viewCounts[index] ? parseInt(viewCounts[index] || "0") : 0,
-        likes: engagement?.likes || 0,
-        comments: engagement?.comments || 0,
+        likes: engagementMetrics[idea.id]?.likes || 0,
+        comments: engagementMetrics[idea.id]?.comments || 0,
       };
     });
 

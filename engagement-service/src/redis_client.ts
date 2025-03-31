@@ -1,5 +1,10 @@
 import Redis from "ioredis";
-import { REDIS_URL, SERVER_HOST, SERVER_PORT } from "./config";
+import {
+  REDIS_CACHE_EXPIRY,
+  REDIS_URL,
+  SERVER_HOST,
+  SERVER_PORT,
+} from "./config";
 
 const redis = new Redis(REDIS_URL);
 
@@ -16,22 +21,17 @@ export const registerService = async () => {
 };
 
 export const mgetEngagements = async (ideaIds: number[]) =>
-  await redis.mget([...ideaIds].map((id) => `engagement:${id}`));
+  await redis.mget(ideaIds.map((id) => `engagement:${id}`));
 
 export const updateEngagementStats = async (
-  redisUpdates: [string, string][]
-) => {
-  if (redisUpdates.length > 0) {
-    await redis.mset(redisUpdates.flat());
-    redisUpdates.forEach(([key]) => redis.expire(key, 3600));
+  ideaId: number,
+  engagementStats: {
+    likes: number;
+    comments: number;
   }
-};
-
-export async function updatePopularity(ideaId: number, score: number) {
-  await redis.zincrby("ideas:popularity", score, ideaId.toString());
-}
-export async function updateTrendingScore(ideaId: number, score: number) {
-  const timestamp = Date.now();
-  await redis.zadd("ideas:trending", timestamp, ideaId.toString()); // Track timestamp
-  await redis.zincrby("ideas:trending_scores", score, ideaId.toString()); // Increase score
-}
+) =>
+  await redis.setex(
+    `engagement:${ideaId}`,
+    REDIS_CACHE_EXPIRY,
+    JSON.stringify(engagementStats)
+  );

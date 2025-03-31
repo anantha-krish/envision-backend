@@ -9,33 +9,10 @@ dotenv.config();
 
 const app = express();
 
-const proxyRequest = async (
-  serviceName: string,
-  req,
-  res,
-  next,
-  pathRewrite = "/api"
-) => {
-  var target = await getNextService(serviceName);
-  if (serviceName === "auth") {
-    target = await getNextService("users");
-  }
-
-  if (!target) {
-    return res.status(502).json({ error: "Service unavailable" });
-  }
-
-  createProxyMiddleware({
-    target,
-    changeOrigin: true,
-    secure: false,
-    pathRewrite: { [`^/${serviceName}`]: pathRewrite },
-  })(req, res, next);
-};
-
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
 const serviceIndex: { [key: string]: number } = {};
+const proxyCache: { [key: string]: any } = {};
 
 // Round-robin load balancing
 export const getNextService = async (
@@ -49,7 +26,23 @@ export const getNextService = async (
   const selectedService = serviceList[serviceIndex[serviceName]];
 
   serviceIndex[serviceName] += 1;
-  return selectedService;
+  try {
+    // Health check using fetch
+    const response = await fetch(`${selectedService}/health`, {
+      method: "GET",
+      // signal: AbortSignal.timeout(1000), // Timeout after 1 second
+    });
+
+    if (response.ok) {
+      return selectedService; // Return if service is healthy
+    }
+  } catch (error) {
+    console.warn(`❌ Unhealthy service detected: ${selectedService}`);
+    // Remove the unhealthy service from Redis
+    await redis.srem(`services:${serviceName}`, selectedService);
+  }
+
+  return null; // No healthy services available
 };
 
 app.get("/redis", async (req: Request, res: Response) => {
@@ -88,36 +81,11 @@ app.get("/redis", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-/*
-// Proxy Requests Dynamically
-app.use(async (req, res, next) => {
-  try {
-    const serviceName = req.path.split("/")[1]; // Extract microservice name
 
-    if (serviceName === "auth") {
-      // Directly forward auth requests without authentication
-      return proxyRequest(serviceName, req, res, next, "/api/auth");
-    }
-
-    if (serviceName === "users") {
-      return proxyRequest(serviceName, req, res, next);
-    }
-
-    // Authenticate for all other services and protected user routes
-    await authenticateAndAuthorize(req, res, next);
-
-    // Forward the request after authentication
-    proxyRequest(serviceName, req, res, next);
-  } catch (error) {
-    console.error("Gateway error:", error);
-    res.status(500).json({ error: "Internal gateway error" });
-  }
-});
-*/
 app.use(
   (req, res, next) => {
     const serviceName = req.path.split("/")[1]; // Extract microservice name
-    if (serviceName == "users") {
+    if (serviceName === "users") {
       next();
       return;
     }
@@ -127,13 +95,18 @@ app.use(
     const serviceName = req.path.split("/")[1]; // Extract microservice name
     const target = await getNextService(serviceName);
     if (target) {
-      createProxyMiddleware({
-        target,
-        changeOrigin: true,
-        secure: false,
-        pathRewrite: { [`^/${serviceName}`]: "/api" },
-      })(req, res, next);
+      if (!proxyCache[serviceName]) {
+        proxyCache[serviceName] = createProxyMiddleware({
+          target,
+          changeOrigin: true,
+          secure: false,
+          pathRewrite: { [`^/${serviceName}`]: "/api" },
+        });
+      }
+
+      return proxyCache[serviceName](req, res, next);
     }
+    res.status(502).json({ error: "Service unavailable" });
   }
 );
 app.use(cors());
