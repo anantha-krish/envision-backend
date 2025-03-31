@@ -6,7 +6,7 @@ import {
   ideaTags,
   tags,
 } from "../db/schema";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql, desc } from "drizzle-orm";
 import {
   delValue,
   getAllIdeasKeys,
@@ -15,6 +15,7 @@ import {
   incrementViews,
   mgetViews,
 } from "../redis_client";
+import { getEngagementMetrics } from "../api";
 
 class IdeaRepository {
   async createIdea(
@@ -174,40 +175,45 @@ class IdeaRepository {
       .returning();
   }
 
-  async getAllIdeas(page: number, pageSize: number = 10) {
-    const offset = (page - 1) * pageSize; // Pagination offset
+  async getAllIdeas(
+    page: number,
+    pageSize: number = 10,
+    sortBy: string = "recent"
+  ) {
+    const offset = (page - 1) * pageSize;
 
-    // Step 1: Fetch only ideas (without joins)
+    // Fetch ideas from DB
     const ideasList = await db
       .select({
         id: ideas.id,
         title: ideas.title,
         summary: ideas.summary,
         status: ideaStatus.name,
+        createdAt: ideas.createdAt,
       })
       .from(ideas)
       .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id))
       .limit(pageSize)
       .offset(offset);
 
-    if (ideasList.length === 0) return []; // Return early if no ideas found
+    if (ideasList.length === 0) return [];
 
-    // Step 2: Fetch tags separately for retrieved ideas
     const ideaIds = ideasList.map((idea) => idea.id);
 
+    // Fetch tags
     const tagResults = await db
-      .select({
-        ideaId: ideaTags.ideaId,
-        tagName: tags.name,
-      })
+      .select({ ideaId: ideaTags.ideaId, tagName: tags.name })
       .from(ideaTags)
       .innerJoin(tags, eq(ideaTags.tagId, tags.id))
       .where(inArray(ideaTags.ideaId, ideaIds));
 
-    // Step 3: Fetch views from Redis in bulk
+    // Fetch views from Redis
     const viewCounts = await mgetViews(ideaIds);
 
-    // Step 4: Combine results efficiently
+    // Fetch likes & comments via API Gateway (Engagement Service)
+    const engagementMetrics = await getEngagementMetrics(ideaIds);
+
+    // Process tags mapping
     const tagsMap: Record<number, string[]> = {};
     tagResults.forEach(({ ideaId, tagName }) => {
       if (!tagsMap[ideaId]) tagsMap[ideaId] = [];
@@ -216,9 +222,39 @@ class IdeaRepository {
 
     const finalResults = ideasList.map((idea, index) => ({
       ...idea,
-      tags: tagsMap[idea.id] || [], // Convert array to string
-      views: viewCounts[index] ? parseInt(viewCounts[index] || "0") : 0, // Parse Redis views
+      tags: tagsMap[idea.id] || [],
+      views: viewCounts[index] ? parseInt(viewCounts[index] || "0") : 0,
+      likes: engagementMetrics[idea.id]?.likes || 0,
+      comments: engagementMetrics[idea.id]?.comments || 0,
     }));
+
+    // Step 8: Apply sorting based on user input
+    switch (sortBy) {
+      case "popular":
+        finalResults.sort(
+          (a, b) => b.likes + b.comments - (a.likes + a.comments)
+        );
+        break;
+      case "views":
+        finalResults.sort((a, b) => b.views - a.views);
+        break;
+      case "trending":
+        finalResults.sort(
+          (a, b) =>
+            (b.likes + b.comments) / (Date.now() - b.createdAt.getTime()) -
+            (a.likes + a.comments) / (Date.now() - a.createdAt.getTime())
+        );
+        break;
+
+      case "recent":
+        finalResults.sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        );
+        break;
+
+      default:
+        break; // Default to no sorting if invalid input
+    }
 
     return finalResults;
   }

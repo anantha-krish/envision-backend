@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import { db } from "../db/db.connection";
 import { likes, comments } from "../db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { sendNewCommentEvent, sendNewLikeEvent } from "../kafka/producer";
 
@@ -100,6 +100,38 @@ router.delete("/comments/:commentId", async (req: Request, res: Response) => {
   const { commentId } = req.params;
   await db.delete(comments).where(eq(comments.id, parseInt(commentId ?? "-1")));
   res.status(200).json({ message: "Comment deleted" });
+});
+
+router.get("/metrics", async (req: Request, res: Response) => {
+  try {
+    const ideaIds = (req.query.ideaIds as String)?.split(",").map(Number);
+
+    if (!ideaIds || ideaIds.length === 0) {
+      res.status(400).json({ error: "Missing or invalid ideaIds parameter" });
+      return;
+    }
+
+    const metrics = await db
+      .select({
+        ideaId: likes.ideaId,
+        likes: sql<number>`COUNT(DISTINCT ${likes.userId})`.as("likes"),
+        comments: sql<number>`COUNT(DISTINCT ${comments.id})`.as("comments"),
+      })
+      .from(likes)
+      .leftJoin(comments, sql`${comments.ideaId} = ${likes.ideaId}`)
+      .where(inArray(likes.ideaId, ideaIds))
+      .groupBy(likes.ideaId);
+
+    const metricsMap = metrics.reduce((acc, row) => {
+      acc[row.ideaId] = { likes: row.likes, comments: row.comments };
+      return acc;
+    }, {} as Record<number, { likes: number; comments: number }>);
+
+    res.json(metricsMap);
+  } catch (error) {
+    console.error("Error fetching engagement metrics:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 export default router;
