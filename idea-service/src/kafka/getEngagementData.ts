@@ -1,4 +1,4 @@
-import { kafka, kafkaConsumer, kafkaProducer } from "./kafka"; // Import Kafka utilities
+import { kafka } from "./kafka"; // Import Kafka utilities
 
 export const fetchEngagementData = async (
   ideaIds: number[]

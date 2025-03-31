@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { ideaRepo } from "../src/repo/ideasRepo";
-import { storeIdeaCreation } from "../src/redis_client";
+import { mgetViews, storeIdeaCreation } from "../src/redis_client";
+import { getEngagementMetrics } from "../src/api";
 
 // Create an idea
 export const createIdea = async (req: Request, res: Response) => {
@@ -51,8 +52,74 @@ export const getAllIdeas = async (req: Request, res: Response) => {
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 10);
     const sortBy = req.query.sortBy ? (req.query.sortBy as string) : "recent";
-    const results = await ideaRepo.getAllIdeas(page, pageSize, sortBy);
-    res.status(200).json(results);
+    const ideasList = await ideaRepo.getAllIdeas(page, pageSize, sortBy);
+    if (ideasList.length === 0) {
+      res.status(200).json({});
+      return;
+    }
+
+    const ideaIds = ideasList.map((idea) => idea.id);
+
+    const tagResults = await ideaRepo.fetchTagsForIdeas(ideaIds);
+
+    // Fetch views from Redis
+    const viewCounts = await mgetViews(ideaIds);
+
+    // Fetch likes & comments via API Gateway (Engagement Service)
+    const engagementMetrics: Record<any, any>[] = await getEngagementMetrics(
+      ideaIds
+    );
+
+    // Process tags mapping
+    const tagsMap: Record<number, string[]> = {};
+    tagResults.forEach(({ ideaId, tagName }) => {
+      if (!tagsMap[ideaId]) tagsMap[ideaId] = [];
+      tagsMap[ideaId].push(tagName);
+    });
+
+    const finalResults = ideasList.map((idea, index) => {
+      var engagement = engagementMetrics.find(
+        (item) => item.ideaId === idea.id
+      );
+
+      return {
+        ...idea,
+        tags: tagsMap[idea.id] || [],
+        views: viewCounts[index] ? parseInt(viewCounts[index] || "0") : 0,
+        likes: engagement?.likes || 0,
+        comments: engagement?.comments || 0,
+      };
+    });
+
+    // Step 8: Apply sorting based on user input
+    switch (sortBy) {
+      case "popular":
+        finalResults.sort(
+          (a, b) => b.likes + b.comments - (a.likes + a.comments)
+        );
+        break;
+      case "views":
+        finalResults.sort((a, b) => b.views - a.views);
+        break;
+      case "trending":
+        finalResults.sort(
+          (a, b) =>
+            (b.likes + b.comments) / (Date.now() - b.createdAt.getTime()) -
+            (a.likes + a.comments) / (Date.now() - a.createdAt.getTime())
+        );
+        break;
+
+      case "recent":
+        finalResults.sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        );
+        break;
+
+      default:
+        break; // Default to no sorting if invalid input
+    }
+
+    res.status(200).json(finalResults);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

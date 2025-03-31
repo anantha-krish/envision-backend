@@ -7,7 +7,7 @@ import {
   updatePopularity,
   updateTrendingScore,
 } from "../redis_client";
-import { kafka, producer } from "./producer";
+import { kafka } from "./producer";
 
 const engagementConsumer = kafka.consumer({
   groupId: "engagement-service-group",
@@ -162,3 +162,42 @@ export const processEngagementRequest = async () => {
     console.error("❌ Failed to subscribe to Kafka topic:", error);
   }
 };
+
+const producer = kafka.producer();
+const consumer = kafka.consumer({ groupId: "engagement-service-group" });
+
+export async function processEngagementMetricsRequests() {
+  await consumer.connect();
+  await producer.connect();
+  await consumer.subscribe({
+    topic: "engagement-metrics-request",
+    fromBeginning: false,
+  });
+
+  consumer.run({
+    eachMessage: async ({ message }) => {
+      const correlationId = message.key?.toString();
+      const { ideaIds } = JSON.parse(message.value?.toString() || "{}");
+
+      // Fetch counts from DB
+      const engagementData = await db
+        .select({
+          ideaId: likes.ideaId,
+          likes: sql<number>`COUNT(DISTINCT ${likes.userId})`,
+          comments: sql<number>`COUNT(DISTINCT ${comments.id})`,
+        })
+        .from(likes)
+        .leftJoin(comments, and(eq(comments.ideaId, likes.ideaId)))
+        .where(inArray(likes.ideaId, ideaIds))
+        .groupBy(likes.ideaId);
+
+      // Send response
+      await producer.send({
+        topic: "engagement-metrics-response",
+        messages: [
+          { key: correlationId, value: JSON.stringify(engagementData) },
+        ],
+      });
+    },
+  });
+}

@@ -15,7 +15,6 @@ import {
   incrementViews,
   mgetViews,
 } from "../redis_client";
-import { getEngagementMetrics } from "../api";
 
 class IdeaRepository {
   async createIdea(
@@ -196,67 +195,7 @@ class IdeaRepository {
       .limit(pageSize)
       .offset(offset);
 
-    if (ideasList.length === 0) return [];
-
-    const ideaIds = ideasList.map((idea) => idea.id);
-
-    // Fetch tags
-    const tagResults = await db
-      .select({ ideaId: ideaTags.ideaId, tagName: tags.name })
-      .from(ideaTags)
-      .innerJoin(tags, eq(ideaTags.tagId, tags.id))
-      .where(inArray(ideaTags.ideaId, ideaIds));
-
-    // Fetch views from Redis
-    const viewCounts = await mgetViews(ideaIds);
-
-    // Fetch likes & comments via API Gateway (Engagement Service)
-    const engagementMetrics = await getEngagementMetrics(ideaIds);
-
-    // Process tags mapping
-    const tagsMap: Record<number, string[]> = {};
-    tagResults.forEach(({ ideaId, tagName }) => {
-      if (!tagsMap[ideaId]) tagsMap[ideaId] = [];
-      tagsMap[ideaId].push(tagName);
-    });
-
-    const finalResults = ideasList.map((idea, index) => ({
-      ...idea,
-      tags: tagsMap[idea.id] || [],
-      views: viewCounts[index] ? parseInt(viewCounts[index] || "0") : 0,
-      likes: engagementMetrics[idea.id]?.likes || 0,
-      comments: engagementMetrics[idea.id]?.comments || 0,
-    }));
-
-    // Step 8: Apply sorting based on user input
-    switch (sortBy) {
-      case "popular":
-        finalResults.sort(
-          (a, b) => b.likes + b.comments - (a.likes + a.comments)
-        );
-        break;
-      case "views":
-        finalResults.sort((a, b) => b.views - a.views);
-        break;
-      case "trending":
-        finalResults.sort(
-          (a, b) =>
-            (b.likes + b.comments) / (Date.now() - b.createdAt.getTime()) -
-            (a.likes + a.comments) / (Date.now() - a.createdAt.getTime())
-        );
-        break;
-
-      case "recent":
-        finalResults.sort(
-          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-        );
-        break;
-
-      default:
-        break; // Default to no sorting if invalid input
-    }
-
-    return finalResults;
+    return ideasList;
   }
 
   async getViews(ideaId: number): Promise<number> {
@@ -332,6 +271,14 @@ class IdeaRepository {
 
     // Optional: Clear Redis views after syncing
     await delValue(ideaIds.map(toString));
+  }
+  async fetchTagsForIdeas(ideaIds) {
+    // Fetch tags
+    return await db
+      .select({ ideaId: ideaTags.ideaId, tagName: tags.name })
+      .from(ideaTags)
+      .innerJoin(tags, eq(ideaTags.tagId, tags.id))
+      .where(inArray(ideaTags.ideaId, ideaIds));
   }
 }
 
