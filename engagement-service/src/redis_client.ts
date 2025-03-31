@@ -23,6 +23,22 @@ export const registerService = async () => {
 export const mgetEngagements = async (ideaIds: number[]) =>
   await redis.mget(ideaIds.map((id) => `engagement:${id}`));
 
+export const incrementLikes = async (ideaId: number) => {
+  await redis.incr(`idea_likes:${ideaId}`);
+};
+
+export const decrementLikes = async (ideaId: number) => {
+  await redis.decr(`idea_likes:${ideaId}`);
+};
+
+export const incrementComments = async (ideaId: number) => {
+  await redis.incr(`idea_comments:${ideaId}`);
+};
+
+export const decrementComments = async (ideaId: number) => {
+  await redis.decr(`idea_comments:${ideaId}`);
+};
+
 export const updateEngagementStats = async (
   ideaId: number,
   engagementStats: {

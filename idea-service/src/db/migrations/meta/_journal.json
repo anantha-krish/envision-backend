@@ -43,6 +43,13 @@
       "when": 1742954053934,
       "tag": "0005_absurd_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1743447493602,
+      "tag": "0006_eager_power_pack",
+      "breakpoints": true
     }
   ]
 }

@@ -17,9 +17,11 @@ export const ideas = pgTable("ideas", {
     .notNull()
     .references(() => ideaStatus.id, { onDelete: "set null" }),
   managerId: integer("manager_id"),
-  views: integer("views").default(0), // Store total
+  views: integer("views").notNull().default(0), // Store total
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  likesCount: integer("likes_count").notNull().default(0), // New column
+  commentsCount: integer("comments_count").notNull().default(0), // New column
 });
 
 export const ideaStatus = pgTable("idea_status", {

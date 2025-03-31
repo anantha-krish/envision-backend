@@ -9,10 +9,14 @@ import {
 import { eq, inArray, sql, desc, count, and, gte, lte } from "drizzle-orm";
 import {
   delValue,
-  getAllIdeasKeys,
+  getCommentedIdeasKeys,
+  getLikedIdeasKeys,
   getValue,
+  getViewedIdeasKeys,
   getViews,
   incrementViews,
+  mgetComments,
+  mgetLikes,
   mgetViews,
 } from "../redis_client";
 
@@ -174,11 +178,7 @@ class IdeaRepository {
       .returning();
   }
 
-  async getAllIdeas(
-    page: number,
-    pageSize: number = 10,
-    sortBy: string = "recent"
-  ) {
+  async getAllIdeas(page: number, pageSize: number = 10) {
     const offset = (page - 1) * pageSize;
 
     // Fetch ideas from DB
@@ -213,65 +213,117 @@ class IdeaRepository {
 
     return result[0]?.views || 0;
   }
-  async syncViewsToDB() {
-    console.log("🔄 Syncing views from Redis to DB...");
+  async syncEngagementStatsToDB() {
+    console.log("🔄 Syncing views, likes, and comments from Redis to DB...");
 
-    // Step 1: Fetch all idea IDs stored in Redis
-    const ideaKeys = await getAllIdeasKeys();
-    const ideaIds = ideaKeys.map((id) => parseInt(id.split(":")[1]));
+    // Step 1: Fetch idea IDs separately for views, likes, and comments
+    const viewedIdeaKeys = await getViewedIdeasKeys(); // e.g., "views:123"
+    const likedIdeaKeys = await getLikedIdeasKeys(); // e.g., "likes:123"
+    const commentedIdeaKeys = await getCommentedIdeasKeys(); // e.g., "comments:123"
+
+    const viewedIdeaIds = viewedIdeaKeys.map((id) =>
+      parseInt(id.split(":")[1])
+    );
+    const likedIdeaIds = likedIdeaKeys.map((id) => parseInt(id.split(":")[1]));
+    const commentedIdeaIds = commentedIdeaKeys.map((id) =>
+      parseInt(id.split(":")[1])
+    );
+
+    // Step 2: Merge all unique idea IDs
+    const ideaIds = [
+      ...new Set([...viewedIdeaIds, ...likedIdeaIds, ...commentedIdeaIds]),
+    ];
 
     if (ideaIds.length === 0) {
-      console.log("✅ No views to sync.");
+      console.log("✅ No engagement stats to sync.");
       return;
     }
 
-    // Step 2: Get views from Redis in bulk
+    // Step 3: Get views, likes, and comments from Redis in bulk
     const viewCounts = await mgetViews(ideaIds);
+    const likeCounts = await mgetLikes(ideaIds);
+    const commentCounts = await mgetComments(ideaIds);
 
-    // Step 3: Fetch existing views from the database
-    const existingViews = await db
+    // Step 4: Fetch existing stats from the database
+    const existingStats = await db
       .select({
         ideaId: ideas.id,
-        views: ideas.views, // Existing views column
+        views: ideas.views,
+        likes: ideas.likesCount,
+        comments: ideas.commentsCount,
       })
       .from(ideas)
       .where(inArray(ideas.id, ideaIds));
 
-    // Convert existing views to a map for quick lookup
-    const existingViewsMap = Object.fromEntries(
-      existingViews.map((row) => [row.ideaId, row.views])
+    // Convert existing stats to a map for quick lookup
+    const existingStatsMap = Object.fromEntries(
+      existingStats.map((row) => [row.ideaId, row])
     );
 
-    // Step 4: Update only if Redis views are higher
-    const updates: { id: number; views: number }[] = [];
+    // Step 5: Prepare updates for only changed records
+    const updates: {
+      id: number;
+      views: number;
+      likes: number;
+      comments: number;
+    }[] = [];
+
     for (let i = 0; i < ideaIds.length; i++) {
       const ideaId = ideaIds[i];
       const redisViews = parseInt(viewCounts[i] || "0");
-      const dbViews = existingViewsMap[ideaId] || 0;
+      const redisLikes = parseInt(likeCounts[i] || "0");
+      const redisComments = parseInt(commentCounts[i] || "0");
 
-      if (redisViews > dbViews) {
+      const dbStats = existingStatsMap[ideaId] || {
+        views: 0,
+        likes: 0,
+        comments: 0,
+      };
+
+      if (
+        redisViews > dbStats.views ||
+        redisLikes > dbStats.likes ||
+        redisComments > dbStats.comments
+      ) {
         updates.push({
           id: ideaId,
-          views: redisViews, // Use max(redisViews, dbViews)
+          views: Math.max(redisViews, dbStats.views),
+          likes: Math.max(redisLikes, dbStats.likes),
+          comments: Math.max(redisComments, dbStats.comments),
         });
       }
     }
 
-    // Step 5: Bulk update views in the database
     if (updates.length > 0) {
-      await db.transaction(async (tx) => {
-        for (const { id, views } of updates) {
-          await tx.update(ideas).set({ views }).where(eq(ideas.id, id));
-        }
-      });
-      console.log(`✅ Synced ${updates.length} views to DB.`);
+      // Use db.batch() to run multiple updates in one query
+      const values = updates
+        .map(
+          ({ id, views, likes, comments }) =>
+            `(${id}, ${views}, ${likes}, ${comments})`
+        )
+        .join(",");
+
+      const updateQuery = sql`
+    UPDATE ideas
+    SET 
+      views = data.views, 
+      likes_count = data.likes, 
+      comments_count = data.comments
+    FROM (VALUES ${sql.raw(values)}) 
+      AS data(id, views, likes, comments)
+    WHERE ideas.id = data.id;
+  `;
+
+      await db.execute(updateQuery);
+      console.log(`✅ Synced ${updates.length} engagement stats to DB.`);
     } else {
       console.log("✅ No updates needed.");
     }
 
-    // Optional: Clear Redis views after syncing
-    await delValue(ideaIds.map(toString));
+    // Step 7: Optional - Clear Redis after syncing
+    await delValue(ideaIds.map(String));
   }
+
   async fetchTagsForIdeas(ideaIds) {
     // Fetch tags
     return await db
@@ -321,5 +373,7 @@ class IdeaRepository {
       .groupBy(ideaStatus.id)
       .orderBy(ideaStatus.id);
   }
+
+  async getTopIdeas() {}
 }
 export const ideaRepo = new IdeaRepository();

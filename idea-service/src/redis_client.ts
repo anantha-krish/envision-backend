@@ -23,8 +23,15 @@ export const getViews = async (ideaId: number) =>
 
 export const mgetViews = async (ideaIds: number[]) =>
   await redis.mget([...ideaIds].map((id) => `idea_views:${id}`));
+export const mgetLikes = async (ideaIds: number[]) =>
+  await redis.mget([...ideaIds].map((id) => `idea_likes:${id}`));
+export const mgetComments = async (ideaIds: number[]) =>
+  await redis.mget([...ideaIds].map((id) => `idea_comments:${id}`));
 
-export const getAllIdeasKeys = async () => await redis.keys("idea_views:*");
+export const getViewedIdeasKeys = async () => await redis.keys("idea_views:*");
+export const getLikedIdeasKeys = async () => await redis.keys("idea_likes:*");
+export const getCommentedIdeasKeys = async () =>
+  await redis.keys("idea_comments:*");
 
 export const getValue = async (key: string) => await redis.get(key);
 export const delValue = async (key: string[]) => await redis.del(...key);

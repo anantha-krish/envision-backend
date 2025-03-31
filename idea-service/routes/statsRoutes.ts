@@ -3,11 +3,12 @@ import {
   getIdeaStatusDistribution,
   getIdeaSubmissions,
   getTopContributors,
+  getTopIdeas,
 } from "../controller/statsController";
 const statsRouter = express.Router();
 
 statsRouter.get("/idea-submissions", getIdeaSubmissions);
-//statsRouter.get("/top-ideas", getTopIdeas);
+statsRouter.get("/top-ideas", getTopIdeas);
 statsRouter.get("/top-contributors", getTopContributors);
 statsRouter.get("/status-distribution", getIdeaStatusDistribution);
 

@@ -5,6 +5,12 @@ import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { sendNewCommentEvent, sendNewLikeEvent } from "../kafka/producer";
 import { fetchEngagementMetrics } from "../repo";
+import {
+  decrementComments,
+  decrementLikes,
+  incrementComments,
+  incrementLikes,
+} from "../redis_client";
 
 const router = Router();
 
@@ -24,6 +30,7 @@ router.post("/likes/:ideaId", async (req: Request, res: Response) => {
   }
 
   await db.insert(likes).values({ userId, ideaId });
+  await incrementLikes(ideaId);
   await sendNewLikeEvent({
     actorId: userId,
     ideaId,
@@ -40,7 +47,7 @@ router.delete("/likes/:ideaId", async (req: Request, res: Response) => {
   await db
     .delete(likes)
     .where(and(eq(likes.userId, userId), eq(likes.ideaId, ideaId)));
-
+  await decrementLikes(ideaId);
   res.status(200).json({ message: "Unliked successfully" });
 });
 
@@ -71,6 +78,7 @@ router.post("/comments/:ideaId", async (req: Request, res: Response) => {
   const { content } = parsed.data;
 
   await db.insert(comments).values({ userId, ideaId, content });
+  await incrementComments(ideaId);
   await sendNewCommentEvent({
     actorId: userId,
     ideaId,
@@ -99,7 +107,14 @@ router.get("/comments/:ideaId", async (req: Request, res: Response) => {
 // Delete a Comment
 router.delete("/comments/:commentId", async (req: Request, res: Response) => {
   const { commentId } = req.params;
-  await db.delete(comments).where(eq(comments.id, parseInt(commentId ?? "-1")));
+
+  var result = await db
+    .delete(comments)
+    .where(eq(comments.id, parseInt(commentId ?? "-1")))
+    .returning({ ideaId: comments.ideaId });
+
+  await decrementComments(result[1].ideaId);
+
   res.status(200).json({ message: "Comment deleted" });
 });
 

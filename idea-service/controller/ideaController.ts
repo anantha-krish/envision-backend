@@ -52,7 +52,7 @@ export const getAllIdeas = async (req: Request, res: Response) => {
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 10);
     const sortBy = req.query.sortBy ? (req.query.sortBy as string) : "recent";
-    const ideasList = await ideaRepo.getAllIdeas(page, pageSize, sortBy);
+    const ideasList = await ideaRepo.getAllIdeas(page, pageSize);
     if (ideasList.length === 0) {
       res.status(200).json({});
       return;
