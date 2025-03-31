@@ -1,6 +1,3 @@
-import { and, count, gte, lte, sql } from "drizzle-orm";
-import { db } from "../src/db/db.connection";
-import { ideas } from "../src/db/schema";
 import { Request, Response } from "express";
 import { startOfMonth, endOfDay, formatISO, startOfDay } from "date-fns";
 import { ideaRepo } from "../src/repo/ideasRepo";
@@ -19,5 +16,16 @@ export const getIdeaSubmissions = async (req: Request, res: Response) => {
     startTimestamp,
     endTimestamp
   );
+  res.status(200).json(result);
+};
+export const getTopContributors = async (req: Request, res: Response) => {
+  var result = await ideaRepo.getTopContributors();
+  res.status(200).json(result);
+};
+export const getIdeaStatusDistribution = async (
+  req: Request,
+  res: Response
+) => {
+  var result = await ideaRepo.getIdeaStatusDistribution();
   res.status(200).json(result);
 };

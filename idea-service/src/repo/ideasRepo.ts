@@ -297,6 +297,29 @@ class IdeaRepository {
       .groupBy(sql`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`)
       .orderBy(sql`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`);
   }
-}
 
+  async getTopContributors() {
+    return await db
+      .select({
+        userId: ideaSubmitters.userId,
+        ideaCount: count(ideas.id).as("ideaCount"),
+      })
+      .from(ideaSubmitters) // Join from idea_submitters
+      .innerJoin(ideas, eq(ideaSubmitters.ideaId, ideas.id)) // Get associated ideas
+      .groupBy(ideaSubmitters.userId)
+      .orderBy(desc(count(ideas.id)))
+      .limit(5);
+  }
+  async getIdeaStatusDistribution() {
+    return await db
+      .select({
+        status: ideaStatus.name,
+        count: count(),
+      })
+      .from(ideas)
+      .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id))
+      .groupBy(ideaStatus.id)
+      .orderBy(ideaStatus.id);
+  }
+}
 export const ideaRepo = new IdeaRepository();
