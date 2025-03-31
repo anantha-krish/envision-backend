@@ -6,6 +6,7 @@ import { SERVER_PORT } from "./src/config";
 import { registerService } from "./src/redis_client";
 import { ideaRepo } from "./src/repo/ideasRepo";
 import { db } from "./src/db/db.connection";
+import statsRouter from "./routes/statsRoutes";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(express.json());
 registerService();
 // Register every 30 seconds to ensure availability
 setInterval(registerService, 30000);
+app.use("/api/stats/", statsRouter);
 app.use("/api/teams/", teamsRouter);
 app.use("/api/approvers/", approverRouter);
 app.use("/api/", ideaRouter);

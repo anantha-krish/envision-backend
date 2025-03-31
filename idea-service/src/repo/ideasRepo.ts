@@ -6,7 +6,7 @@ import {
   ideaTags,
   tags,
 } from "../db/schema";
-import { eq, inArray, sql, desc } from "drizzle-orm";
+import { eq, inArray, sql, desc, count, and, gte, lte } from "drizzle-orm";
 import {
   delValue,
   getAllIdeasKeys,
@@ -279,6 +279,23 @@ class IdeaRepository {
       .from(ideaTags)
       .innerJoin(tags, eq(ideaTags.tagId, tags.id))
       .where(inArray(ideaTags.ideaId, ideaIds));
+  }
+
+  async getIdeasSubmissionsByRange(startTimestamp: Date, endTimestamp: Date) {
+    return await db
+      .select({
+        date: sql<string>`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`,
+        count: count(),
+      })
+      .from(ideas)
+      .where(
+        and(
+          gte(ideas.createdAt, startTimestamp),
+          lte(ideas.createdAt, endTimestamp)
+        )
+      )
+      .groupBy(sql`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`)
+      .orderBy(sql`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`);
   }
 }
 
