@@ -24,7 +24,7 @@ export const incrementViews = async (ideaId: number) => {
       .select({ view: count().as("count") })
       .from(ideas)
       .where(eq(ideas.id, ideaId));
-    await redis.set(`idea_views:${ideaId}`, view, "EX", 300);
+    await redis.set(`idea_views:${ideaId}`, view);
     return;
   }
 

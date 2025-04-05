@@ -32,7 +32,7 @@ export const incrementLikes = async (ideaId: number) => {
       .select({ like: count().as("count") })
       .from(likes)
       .where(eq(likes.ideaId, ideaId));
-    await redis.set(`idea_likes:${ideaId}`, like, "EX", REDIS_CACHE_EXPIRY);
+    await redis.set(`idea_likes:${ideaId}`, like);
     return;
   }
   await redis.incr(`idea_likes:${ideaId}`);
@@ -44,7 +44,7 @@ export const decrementLikes = async (ideaId: number) => {
       .select({ like: count().as("count") })
       .from(likes)
       .where(eq(likes.ideaId, ideaId));
-    await redis.set(`idea_likes:${ideaId}`, like, "EX", REDIS_CACHE_EXPIRY);
+    await redis.set(`idea_likes:${ideaId}`, like);
     return;
   }
   await redis.decr(`idea_likes:${ideaId}`);
