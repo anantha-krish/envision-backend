@@ -3,12 +3,10 @@ import dotenv from "dotenv";
 import engagementRoutes from "./src/routes/engagement";
 import { SERVER_PORT } from "./src/config";
 import { registerService } from "./src/redis_client";
-import { processEngagementMetricsRequests } from "./src/kafka/consumer";
+
 import { db } from "./src/db/db.connection";
 
 const app = express();
-// Start the consumer when the service boots up
-processEngagementMetricsRequests().catch(console.error);
 app.use(express.json());
 app.use("/api/", engagementRoutes);
 app.get("/health", async (req: Request, res: Response) => {

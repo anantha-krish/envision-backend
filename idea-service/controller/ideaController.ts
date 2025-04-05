@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { ideaRepo, SortOption, validSortOptions } from "../src/repo/ideasRepo";
 import { mgetViews, storeIdeaCreation } from "../src/redis_client";
-import { getEngagementMetrics } from "../src/kafka/engagementAsync";
 
 // Create an idea
 export const createIdea = async (req: Request, res: Response) => {

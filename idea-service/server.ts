@@ -7,7 +7,6 @@ import { registerService } from "./src/redis_client";
 import { ideaRepo } from "./src/repo/ideasRepo";
 import { db } from "./src/db/db.connection";
 import statsRouter from "./routes/statsRoutes";
-import { startConsumer2 } from "./src/kafka/engagementEventAsync";
 
 const app = express();
 
@@ -20,7 +19,6 @@ const syncEngagementStats = async () => {
   }
 };
 syncEngagementStats();
-// Run every 2 minutes
 setInterval(syncEngagementStats, 5 * 60 * 1000);
 //app.use(cors());
 app.use(express.json());

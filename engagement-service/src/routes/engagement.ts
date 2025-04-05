@@ -4,7 +4,6 @@ import { likes, comments } from "../db/schema";
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { sendNewCommentEvent, sendNewLikeEvent } from "../kafka/producer";
-import { fetchEngagementMetrics } from "../repo";
 import {
   decrementComments,
   decrementLikes,
@@ -116,22 +115,6 @@ router.delete("/comments/:commentId", async (req: Request, res: Response) => {
   await decrementComments(result[1].ideaId);
 
   res.status(200).json({ message: "Comment deleted" });
-});
-
-router.get("/metrics", async (req: Request, res: Response) => {
-  try {
-    const ideaIds = (req.query.ideaIds as String)?.split(",").map(Number);
-
-    if (!ideaIds || ideaIds.length === 0) {
-      res.status(400).json({ error: "Missing or invalid ideaIds parameter" });
-      return;
-    }
-    var metricsMap = await fetchEngagementMetrics(ideaIds);
-    res.json(metricsMap);
-  } catch (error) {
-    console.error("Error fetching engagement metrics:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
 });
 
 export default router;
