@@ -1,5 +1,8 @@
 import Redis from "ioredis";
 import { SERVER_HOST, SERVER_PORT, SERVICE_NAME } from "./config";
+import { ideas } from "./db/schema";
+import { count, eq } from "drizzle-orm";
+import { db } from "./db/db.connection";
 
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
@@ -16,6 +19,15 @@ export const registerService = async () => {
 };
 
 export const incrementViews = async (ideaId: number) => {
+  if (getViews(ideaId) === null) {
+    const [{ view }] = await db
+      .select({ view: count().as("count") })
+      .from(ideas)
+      .where(eq(ideas.id, ideaId));
+    await redis.set(`idea_views:${ideaId}`, view, "EX", 300);
+    return;
+  }
+
   await redis.incr(`idea_views:${ideaId}`);
 };
 export const getViews = async (ideaId: number) =>

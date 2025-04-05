@@ -5,6 +5,9 @@ import {
   SERVER_HOST,
   SERVER_PORT,
 } from "./config";
+import { db } from "./db/db.connection";
+import { comments, likes } from "./db/schema";
+import { count, countDistinct, eq } from "drizzle-orm";
 
 const redis = new Redis(REDIS_URL);
 
@@ -24,18 +27,50 @@ export const mgetEngagements = async (ideaIds: number[]) =>
   await redis.mget(ideaIds.map((id) => `engagement:${id}`));
 
 export const incrementLikes = async (ideaId: number) => {
+  if ((await redis.get(`idea_likes:${ideaId}`)) === null) {
+    const [{ like }] = await db
+      .select({ like: count().as("count") })
+      .from(likes)
+      .where(eq(likes.ideaId, ideaId));
+    await redis.set(`idea_likes:${ideaId}`, like, "EX", REDIS_CACHE_EXPIRY);
+    return;
+  }
   await redis.incr(`idea_likes:${ideaId}`);
 };
 
 export const decrementLikes = async (ideaId: number) => {
+  if ((await redis.get(`idea_likes:${ideaId}`)) === null) {
+    const [{ like }] = await db
+      .select({ like: count().as("count") })
+      .from(likes)
+      .where(eq(likes.ideaId, ideaId));
+    await redis.set(`idea_likes:${ideaId}`, like, "EX", REDIS_CACHE_EXPIRY);
+    return;
+  }
   await redis.decr(`idea_likes:${ideaId}`);
 };
 
 export const incrementComments = async (ideaId: number) => {
+  if ((await redis.get(`idea_comments:${ideaId}`)) === null) {
+    const [{ like }] = await db
+      .select({ like: count().as("count") })
+      .from(comments)
+      .where(eq(comments.ideaId, ideaId));
+    await redis.set(`idea_comments:${ideaId}`, like);
+    return;
+  }
   await redis.incr(`idea_comments:${ideaId}`);
 };
 
 export const decrementComments = async (ideaId: number) => {
+  if ((await redis.get(`idea_comments:${ideaId}`)) === null) {
+    const [{ like }] = await db
+      .select({ like: count().as("count") })
+      .from(comments)
+      .where(eq(comments.ideaId, ideaId));
+    await redis.set(`idea_comments:${ideaId}`, like);
+    return;
+  }
   await redis.decr(`idea_comments:${ideaId}`);
 };
 
