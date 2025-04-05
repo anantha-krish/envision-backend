@@ -6,7 +6,17 @@ import {
   ideaTags,
   tags,
 } from "../db/schema";
-import { eq, inArray, sql, desc, count, and, gte, lte } from "drizzle-orm";
+import {
+  eq,
+  inArray,
+  sql,
+  desc,
+  count,
+  and,
+  gte,
+  lte,
+  like,
+} from "drizzle-orm";
 import {
   delValue,
   getCommentedIdeasKeys,
@@ -19,7 +29,15 @@ import {
   mgetLikes,
   mgetViews,
 } from "../redis_client";
-
+import { view } from "drizzle-orm/sqlite-core";
+export const validSortOptions = [
+  "popular",
+  "trend",
+  "most_liked",
+  "most_viewed",
+  "recent",
+] as const;
+export type SortOption = (typeof validSortOptions)[number];
 class IdeaRepository {
   async createIdea(
     title: string,
@@ -80,6 +98,9 @@ class IdeaRepository {
         summary: ideas.summary,
         description: ideas.description,
         status: ideaStatus.name, // Get status text
+        likes: ideas.likesCount,
+        comments: ideas.commentsCount,
+        views: ideas.views,
         managerId: ideas.managerId,
         createdAt: ideas.createdAt,
         updatedAt: ideas.updatedAt,
@@ -178,24 +199,46 @@ class IdeaRepository {
       .returning();
   }
 
-  async getAllIdeas(page: number, pageSize: number = 10) {
-    const offset = (page - 1) * pageSize;
+  _getOrderByClause = (sortBy: SortOption) => {
+    switch (sortBy) {
+      case "popular":
+        return sql`(${ideas.likesCount} + ${ideas.commentsCount}) DESC`;
+      case "trend":
+        return sql`(${ideas.likesCount} + ${ideas.commentsCount})::float / EXTRACT(EPOCH FROM (NOW() - ${ideas.createdAt})) DESC`;
+      case "most_liked":
+        return sql`${ideas.likesCount} DESC`;
+      case "most_viewed":
+        return sql`${ideas.views} DESC`;
+      case "recent":
+      default:
+        return sql`${ideas.createdAt} DESC`;
+    }
+  };
 
-    // Fetch ideas from DB
-    const ideasList = await db
+  async getAllIdeas(
+    page: number = 1,
+    pageSize: number = 10,
+    sortBy: SortOption
+  ) {
+    const offset = (page - 1) * pageSize;
+    const orderBy = this._getOrderByClause(sortBy);
+
+    return await db
       .select({
         id: ideas.id,
         title: ideas.title,
         summary: ideas.summary,
         status: ideaStatus.name,
+        likes: ideas.likesCount,
+        comments: ideas.commentsCount,
+        views: ideas.views,
         createdAt: ideas.createdAt,
       })
       .from(ideas)
       .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id))
+      .orderBy(orderBy)
       .limit(pageSize)
       .offset(offset);
-
-    return ideasList;
   }
 
   async getViews(ideaId: number): Promise<number> {

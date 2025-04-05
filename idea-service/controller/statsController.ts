@@ -33,27 +33,19 @@ export const getIdeaStatusDistribution = async (
 };
 
 export const getTopIdeas = async (req: Request, res: Response) => {
-  const ideasList = await ideaRepo.getAllIdeas(1, 10);
+  const ideasList = await ideaRepo.getAllIdeas(1, 10, "popular");
   if (ideasList.length === 0) {
     res.status(200).json({});
     return;
   }
 
-  const ideaIds = ideasList.map((idea) => idea.id);
-
-  // Fetch likes & comments via API Gateway (Engagement Service)
-  const engagementMetrics: Record<any, any>[] = await getEngagementMetrics(
-    ideaIds
-  );
-
   const finalResults = ideasList.map((idea) => {
     return {
       title: idea.title,
-      likes: engagementMetrics[idea.id]?.likes || 0,
-      comments: engagementMetrics[idea.id]?.comments || 0,
+      likes: idea.likes || 0,
+      comments: idea.comments || 0,
     };
   });
 
-  finalResults.sort((a, b) => b.likes + b.comments - (a.likes + a.comments));
   res.status(200).json(finalResults);
 };
