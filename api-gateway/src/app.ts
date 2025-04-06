@@ -8,6 +8,7 @@ import { authenticateAndAuthorize } from "./authenticateMiddleware";
 dotenv.config();
 
 const app = express();
+app.use(cors());
 
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
@@ -109,7 +110,7 @@ app.use(
     res.status(502).json({ error: "Service unavailable" });
   }
 );
-app.use(cors());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Health Check Route
