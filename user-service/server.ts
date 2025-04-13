@@ -5,13 +5,14 @@ import { SERVER_PORT } from "./src/config";
 import { registerService } from "./src/redis_client";
 import userRoutes from "./src/routes/userRoutes";
 import { db } from "./src/db/db.connection";
+import { userRepo } from "./src/repository/userRepo";
 
 const app = express();
 
 //app.use(cors());
 app.use(cookieParser());
 app.use(express.json());
-
+userRepo.seedRolesAndDesignations();
 registerService();
 // Register every 30 seconds to ensure availability
 setInterval(registerService, 30000);

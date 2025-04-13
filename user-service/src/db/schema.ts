@@ -7,27 +7,19 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-// ENUM for Role-Based Access
-export const userRoles = pgEnum("user_role", [
-  "USER",
-  "POC_TEAM",
-  "MANAGER",
-  "APPROVER",
-  "ADMIN",
-]);
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  roleCode: varchar("role_code", { length: 50 }).notNull().unique(),
+  roleName: varchar("role_name", { length: 100 }).notNull(),
+});
 
-export const designationEnum = pgEnum("designation", [
-  "MANAGER",
-  "ARCHITECT",
-  "LEAD",
-  "BUSINESS ANALYST",
-  "SENIOR ENGINEER",
-  "ENGINEER",
-]);
-
-export type Roles = (typeof userRoles.enumValues)[number];
-export type Designations = (typeof designationEnum.enumValues)[number];
-// Users Table
+export const designations = pgTable("designations", {
+  id: serial("id").primaryKey(),
+  designationCode: varchar("designation_code", { length: 50 })
+    .notNull()
+    .unique(),
+  designationName: varchar("designation_name", { length: 100 }).notNull(),
+});
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -45,10 +37,12 @@ export const userProfiles = pgTable("user_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
-  role: userRoles("role").default(userRoles.enumValues[0]), // Enum for role
-  designation: designationEnum("designation")
+  roleId: integer("role_id")
     .notNull()
-    .default(designationEnum.enumValues[5]), // Enum for designation
+    .references(() => roles.id, { onDelete: "restrict" }),
+  designationId: integer("designation_id")
+    .notNull()
+    .references(() => designations.id, { onDelete: "restrict" }),
 });
 export const userManagers = pgTable("user_managers", {
   id: serial("id").primaryKey(),

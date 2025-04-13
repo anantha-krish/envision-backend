@@ -98,15 +98,7 @@ const deleteUser = async (req: Request, res: Response) => {
 
   try {
     const result = await userRepo.deleteUser(parseInt(id));
-
-    if (result.rowCount === 0) {
-      res.status(404).json({ message: "User not found" });
-      return;
-    }
-
-    /*  await sendKafkaUserEvent("USER_DELETED", { userId: id });
-     */
-    res.status(204).send();
+    res.status(result.status).json(result.message);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -136,14 +128,14 @@ const loginUser = async (req: Request, res: Response) => {
     }
 
     const accessToken = jwt.sign(
-      { user_id: user.id, role: user.role },
+      { user_id: user.id, role: user.roleCode },
       ACCESS_TOKEN_SECRET,
       {
         expiresIn: ACCESS_TOKEN_EXPIRY_IN_MINS,
       }
     );
     const refreshToken = jwt.sign(
-      { user_id: user.id, role: user.role },
+      { user_id: user.id, role: user.roleCode },
       REFRESH_TOKEN_SECRET,
       {
         expiresIn: REFRESH_TOKEN_EXPIRY_IN_DAYS,
