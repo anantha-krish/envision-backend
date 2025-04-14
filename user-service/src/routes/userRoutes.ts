@@ -23,9 +23,9 @@ router.post("/register", createUser);
 router.patch("/:id", authenticateJwt, updateUser);
 router.delete("/:id", authenticateJwt, deleteUser);
 router.post("/login", loginUser);
-router.get("/", authenticateJwt, getAllUsersByRoleCode);
-router.get("/roles", authenticateJwt, getAllRoles);
-router.get("/designations", authenticateJwt, getAllDesignations);
+router.get("/", getAllUsersByRoleCode);
+router.get("/roles", getAllRoles);
+router.get("/designations", getAllDesignations);
 router.get("/logout", authenticateJwt, logOut);
 router.post("/refresh", refreshAccessToken);
 
