@@ -3,6 +3,9 @@ import { Router } from "express";
 import {
   createUser,
   deleteUser,
+  getAllDesignations,
+  getAllRoles,
+  getAllUsersByRoleCode,
   getUsers,
   loginUser,
   logOut,
@@ -11,14 +14,18 @@ import {
 } from "../controllers/userController";
 import { authenticateJwt } from "../middleware/authenticate";
 import { authorizeRoles } from "../middleware/authorize";
+import { designations } from "../db/schema";
 
 const router = Router();
 
 router.post("/register", createUser);
-router.get("/", authenticateJwt, authorizeRoles("ADMIN"), getUsers);
+//router.get("/", authenticateJwt, authorizeRoles("ADMIN"), getUsers);
 router.patch("/:id", authenticateJwt, updateUser);
 router.delete("/:id", authenticateJwt, deleteUser);
 router.post("/login", loginUser);
+router.get("/", authenticateJwt, getAllUsersByRoleCode);
+router.get("/roles", authenticateJwt, getAllRoles);
+router.get("/designations", authenticateJwt, getAllDesignations);
 router.get("/logout", authenticateJwt, logOut);
 router.post("/refresh", refreshAccessToken);
 

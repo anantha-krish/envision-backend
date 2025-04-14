@@ -271,6 +271,39 @@ class UserRepository {
 
     console.log("✅ Roles and Designations seeded successfully!");
   }
+
+  async getAllUsersByRoleCode(roleCode: string) {
+    return db
+      .select({
+        userId: users.id,
+        email: users.email,
+        firstName: userProfiles.firstName,
+        lastName: userProfiles.lastName,
+      })
+      .from(users)
+      .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .innerJoin(roles, eq(userProfiles.roleId, roles.id))
+      .where(eq(roles.roleCode, roleCode));
+  }
+
+  async getAllRoles() {
+    return db
+      .select({
+        id: roles.id,
+        roleCode: roles.roleCode,
+        roleName: roles.roleName,
+      })
+      .from(roles);
+  }
+  async getAllDesignations() {
+    return db
+      .select({
+        id: designations.id,
+        designationCode: designations.designationCode,
+        designationName: designations.designationName,
+      })
+      .from(designations);
+  }
 }
 
 export const userRepo = new UserRepository();

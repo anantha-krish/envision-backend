@@ -208,6 +208,37 @@ const refreshAccessToken = async (req: Request, res: Response) => {
   }
 };
 
+const getAllUsersByRoleCode = async (req: Request, res: Response) => {
+  try {
+    const roleCode = req.query.roleCode as string;
+    if (!roleCode) {
+      res.status(400).json({ message: "Role code is required" });
+      return;
+    }
+    const results = await userRepo.getAllUsersByRoleCode(roleCode);
+    res.json(results);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getAllRoles = async (req: Request, res: Response) => {
+  try {
+    const results = await userRepo.getAllRoles();
+    res.json(results);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+const getAllDesignations = async (req: Request, res: Response) => {
+  try {
+    const results = await userRepo.getAllDesignations();
+    res.json(results);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export {
   createUser,
   deleteUser,
@@ -216,4 +247,7 @@ export {
   logOut,
   refreshAccessToken,
   updateUser,
+  getAllUsersByRoleCode,
+  getAllRoles,
+  getAllDesignations,
 };
