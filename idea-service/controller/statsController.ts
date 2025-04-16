@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { startOfMonth, endOfDay, formatISO, startOfDay } from "date-fns";
 import { ideaRepo } from "../src/repo/ideasRepo";
-import { getEngagementMetrics } from "../src/kafka/engagementAsync";
 import { db } from "../src/db/db.connection";
 import { ideas, ideaTags, tags } from "../src/db/schema";
 import { count, eq, gte, and, desc, lte } from "drizzle-orm";
