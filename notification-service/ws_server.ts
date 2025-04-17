@@ -1,77 +1,92 @@
 import { createServer } from "http";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
+import jwt from "jsonwebtoken";
 import { WS_SERVER_PORT } from "./src/config";
 
 const httpServer = createServer();
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
-const clients = new Map<string, any>();
+const clients = new Map<number, Socket>();
 
 io.on("connection", (socket) => {
-  const userId = socket.handshake.query.userId as string;
-  if (userId) {
-    clients.set(userId, socket);
-    console.log(`User ${userId} connected.`);
+  const token = socket.handshake.query.token as string;
+
+  if (!token) {
+    console.log("❌ Connection rejected: Missing token.");
+    socket.disconnect(true);
+    return;
   }
 
-  socket.on("disconnect", () => {
-    if (userId) {
+  try {
+    const secretKey = process.env.ACCESS_TOKEN_SECRET || "my_secret";
+    const payload = jwt.verify(token, secretKey) as { user_id: number };
+
+    const userId = payload.user_id;
+    console.log(`✅ Token verified for user: ${userId}`);
+
+    clients.set(userId, socket);
+    console.log("Current connected clients:", [...clients.keys()]);
+
+    socket.on("disconnect", () => {
       clients.delete(userId);
       console.log(`User ${userId} disconnected.`);
-    }
-  });
+    });
+  } catch (error) {
+    console.error("❌ Invalid token, disconnecting socket.", error);
+    socket.disconnect(true);
+  }
 });
 
-// 🔴 Forcefully Close All Connections on Shutdown
+// Graceful shutdown
 const shutdown = () => {
-  console.log("Shutting down WebSocket server...");
+  console.log("🛑 Shutting down WebSocket server...");
 
-  // Close all WebSocket connections
   clients.forEach((socket) => socket.disconnect(true));
   clients.clear();
 
-  // Close WebSocket server
-  io.close(() => {
-    console.log("WebSocket server closed.");
-  });
-
-  // Close HTTP server
+  io.close(() => console.log("✅ WebSocket server closed."));
   httpServer.close(() => {
-    console.log("HTTP server closed.");
+    console.log("✅ HTTP server closed.");
     process.exit(0);
   });
 
-  // Force shutdown if not closed properly
   setTimeout(() => {
-    console.error("Force closing WebSocket server...");
+    console.error("⚡ Force closing WebSocket server...");
     process.exit(1);
   }, 5000);
 };
 
-// ✅ Listen for shutdown signals
-process.on("SIGINT", shutdown); // CTRL+C (local)
-process.on("SIGTERM", shutdown); // Docker/PM2 stop
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
-// ✅ Handle errors (like port already in use)
 httpServer.on("error", (err: any) => {
   if (err.code === "EADDRINUSE") {
-    console.error(`Port ${WS_SERVER_PORT} is already in use. Retrying...`);
+    console.error(`❗ Port ${WS_SERVER_PORT} is already in use. Retrying...`);
     setTimeout(() => {
       httpServer.close();
       httpServer.listen(WS_SERVER_PORT);
     }, 3000);
   } else {
-    console.error("Server error:", err);
+    console.error("❗ Server error:", err);
   }
 });
 
 httpServer.listen(WS_SERVER_PORT, () => {
-  console.log(`WebSocket server running on port ${WS_SERVER_PORT}`);
+  console.log(`🚀 WebSocket server running on port ${WS_SERVER_PORT}`);
 });
 
-// 🔔 Send notifications
-export const notifyClient = (userId: string, notification: any) => {
-  if (clients.has(userId)) {
-    clients.get(userId).emit("notification", notification);
+// Notification function with acknowledgment
+export const notifyClient = (
+  userId: number,
+  notification: { type: string; payload: any }
+) => {
+  const socket = clients.get(userId);
+
+  if (socket) {
+    socket.emit("notification_event", notification, (ack: any) => {
+      console.log(`📨 Notification sent to ${userId}. Ack:`, ack);
+    });
+  } else {
+    console.warn(`⚠️ User ${userId} is not connected. Notification not sent.`);
   }
 };

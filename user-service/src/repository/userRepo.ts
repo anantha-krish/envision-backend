@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "../db/db.connection";
 import {
   users,
@@ -284,6 +284,17 @@ class UserRepository {
       .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
       .innerJoin(roles, eq(userProfiles.roleId, roles.id))
       .where(eq(roles.roleCode, roleCode));
+  }
+  async getAllUsersByUserId(userIds: number[]) {
+    return db
+      .select({
+        userId: users.id,
+        firstName: userProfiles.firstName,
+        lastName: userProfiles.lastName,
+      })
+      .from(users)
+      .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .where(inArray(users.id, userIds));
   }
 
   async getAllRoles() {

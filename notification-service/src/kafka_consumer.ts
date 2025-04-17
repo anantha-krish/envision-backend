@@ -6,7 +6,7 @@ import {
   notificationActors,
   notificationRecipients,
 } from "./db/schema";
-import { updateUnreadCount } from "./redis_client";
+import { getUnreadCount, updateUnreadCount } from "./redis_client";
 import { and, eq, sql } from "drizzle-orm";
 import { notifyClient } from "../ws_server";
 
@@ -156,12 +156,13 @@ export const consumeMessages = async () => {
         }
       });
 
-      // Update Redis unread count
-      recipients.forEach((userId) => updateUnreadCount(userId));
-
-      // Notify WebSocket clients
-      recipients.forEach((userId) =>
-        notifyClient(userId, { type, ideaId, actorId })
+      await Promise.all(
+        recipients.map(async (userId: number) => {
+          var _id = userId.toString();
+          await updateUnreadCount(_id);
+          const count = await getUnreadCount(_id);
+          notifyClient(userId, { type: "unread_count", payload: count });
+        })
       );
     },
   });

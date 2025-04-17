@@ -8,7 +8,12 @@ import { authenticateAndAuthorize } from "./authenticateMiddleware";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 

@@ -211,11 +211,20 @@ const refreshAccessToken = async (req: Request, res: Response) => {
 const getAllUsersByRoleCode = async (req: Request, res: Response) => {
   try {
     const roleCode = req.query.roleCode as string;
-    if (!roleCode) {
-      res.status(400).json({ message: "Role code is required" });
+    let userIds = req.query.userIds as string[];
+    if (!Array.isArray(userIds)) {
+      userIds = [userIds];
+    }
+    if (!roleCode && !userIds) {
+      res.status(400).json({ message: "Role code or userIds is required" });
       return;
     }
-    const results = await userRepo.getAllUsersByRoleCode(roleCode);
+    let results;
+    if (roleCode && !userIds) {
+      results = await userRepo.getAllUsersByRoleCode(roleCode);
+    } else if (userIds.length > 0) {
+      results = await userRepo.getAllUsersByUserId(userIds.map(Number));
+    }
     res.json(results);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

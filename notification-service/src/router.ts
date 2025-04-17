@@ -8,6 +8,7 @@ import {
 } from "./db/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { getUnreadCount, markAllAsRead } from "./redis_client";
+import { notifyClient } from "../ws_server";
 
 const router = express.Router();
 router.post("/mark-read/:userId?", async (req: Request, res: Response) => {
@@ -100,8 +101,8 @@ router.get("/:userId?", async (req, res) => {
         actorIds, // Store all actor userIds
         message:
           actorIds.length === 1
-            ? `User ${actorIds[0]} ${notif.type.toLowerCase()}d the idea`
-            : `User ${actorIds[0]} and ${
+            ? `%USER-${actorIds[0]}% ${notif.type.toLowerCase()}d the idea`
+            : `%USER-${actorIds[0]}% and ${
                 actorIds.length - 1
               } others ${notif.type.toLowerCase()}d the idea`,
         count: notif.count,
@@ -123,6 +124,17 @@ router.get("/:userId?", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Internal error" });
   }
+});
+
+router.post("/test-socket-server/:userId?", (req, res) => {
+  const userId = req.params.userId ?? (req.headers.user_id as string);
+  const mockCount = req.body.count ?? 3;
+  if (!userId) {
+    res.status(400).json({ error: "User ID is required" });
+    return;
+  }
+  notifyClient(+userId, { type: "unread_count", payload: mockCount });
+  res.json({ message: `Notification sent to ${userId}` });
 });
 
 export default router;
