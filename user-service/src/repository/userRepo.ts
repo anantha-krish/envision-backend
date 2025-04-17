@@ -7,11 +7,12 @@ import {
   roles,
   designations,
 } from "../db/schema";
+import { use } from "passport";
 
 class UserRepository {
   // 🔹 Fetch All Users with Profiles & Manager Info
   async getAllUsers() {
-    return db
+    return await db
       .select({
         userId: users.id,
         username: users.username,
@@ -86,7 +87,7 @@ class UserRepository {
     designationCode: string,
     managerId?: number // Optional manager assignment
   ) {
-    return db.transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
       // Lookup roleId based on roleCode
       const roleRecord = await tx.query.roles.findFirst({
         where: (roles, { eq }) => eq(roles.roleCode, roleCode),
@@ -147,7 +148,7 @@ class UserRepository {
     designation?: string,
     managerId?: number
   ) {
-    return db.transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
       const updateUserFields: Partial<{ username: string; email: string }> = {};
       const updateProfileFields: Partial<{
         firstName: string;
@@ -184,7 +185,7 @@ class UserRepository {
   }
 
   async deleteUser(id: number) {
-    return db.transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
       const userExists = await tx
         .select()
         .from(users)
@@ -208,7 +209,7 @@ class UserRepository {
 
   // 🔹 Get User by Email (For Authentication)
   async getUserByEmail(email: string) {
-    return db
+    return await db
       .select({
         id: users.id,
         username: users.username,
@@ -224,7 +225,7 @@ class UserRepository {
   }
 
   async getUserByIdForJwtAuth(userId: number) {
-    return db
+    return await db
       .select({
         userId: users.id,
         roleCode: roles.roleCode,
@@ -273,7 +274,7 @@ class UserRepository {
   }
 
   async getAllUsersByRoleCode(roleCode: string) {
-    return db
+    return await db
       .select({
         userId: users.id,
         email: users.email,
@@ -286,7 +287,7 @@ class UserRepository {
       .where(eq(roles.roleCode, roleCode));
   }
   async getAllUsersByUserId(userIds: number[]) {
-    return db
+    return await db
       .select({
         userId: users.id,
         firstName: userProfiles.firstName,
@@ -298,7 +299,7 @@ class UserRepository {
   }
 
   async getAllRoles() {
-    return db
+    return await db
       .select({
         id: roles.id,
         roleCode: roles.roleCode,
@@ -307,7 +308,7 @@ class UserRepository {
       .from(roles);
   }
   async getAllDesignations() {
-    return db
+    return await db
       .select({
         id: designations.id,
         designationCode: designations.designationCode,

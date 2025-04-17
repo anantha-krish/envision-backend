@@ -5,7 +5,7 @@ import {
   deleteUser,
   getAllDesignations,
   getAllRoles,
-  getAllUsersByRoleCode,
+  getAllUsersByRoleCode as filterUsers,
   getUsers,
   loginUser,
   logOut,
@@ -23,7 +23,7 @@ router.post("/register", createUser);
 router.patch("/:id", authenticateJwt, updateUser);
 router.delete("/:id", authenticateJwt, deleteUser);
 router.post("/login", loginUser);
-router.get("/", getAllUsersByRoleCode);
+router.get("/", filterUsers);
 router.get("/roles", getAllRoles);
 router.get("/designations", getAllDesignations);
 router.get("/logout", authenticateJwt, logOut);

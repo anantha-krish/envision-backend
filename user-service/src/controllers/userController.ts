@@ -208,7 +208,7 @@ const refreshAccessToken = async (req: Request, res: Response) => {
   }
 };
 
-const getAllUsersByRoleCode = async (req: Request, res: Response) => {
+const filtersUsers = async (req: Request, res: Response) => {
   try {
     const roleCode = req.query.roleCode as string;
     let userIds = req.query.userIds as string[];
@@ -256,7 +256,7 @@ export {
   logOut,
   refreshAccessToken,
   updateUser,
-  getAllUsersByRoleCode,
+  filtersUsers as getAllUsersByRoleCode,
   getAllRoles,
   getAllDesignations,
 };
