@@ -212,18 +212,19 @@ const filtersUsers = async (req: Request, res: Response) => {
   try {
     const roleCode = req.query.roleCode as string;
     let userIds = req.query.userIds as string[];
-    if (!Array.isArray(userIds)) {
+    if (userIds && !Array.isArray(userIds)) {
       userIds = [userIds];
+    } else {
+      userIds = [];
     }
-    if (!roleCode && !userIds) {
-      res.status(400).json({ message: "Role code or userIds is required" });
-      return;
-    }
+
     let results;
-    if (roleCode && !userIds) {
-      results = await userRepo.getAllUsersByRoleCode(roleCode);
-    } else if (userIds.length > 0) {
+    if (userIds.length > 0) {
       results = await userRepo.getAllUsersByUserId(userIds.map(Number));
+    } else if (roleCode && userIds.length == 0) {
+      results = await userRepo.getAllUsersByRoleCode(roleCode);
+    } else {
+      results = await userRepo.getAllUsers();
     }
     res.json(results);
   } catch (err: any) {
