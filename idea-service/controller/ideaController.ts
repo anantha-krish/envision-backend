@@ -3,7 +3,7 @@ import { ideaRepo, SortOption, validSortOptions } from "../src/repo/ideasRepo";
 import { mgetViews, storeIdeaCreation } from "../src/redis_client";
 import { db } from "../src/db/db.connection";
 import { tags } from "../src/db/schema";
-import { inArray } from "drizzle-orm";
+import { inArray, eq } from "drizzle-orm";
 
 // Create an idea
 export const createIdea = async (req: Request, res: Response) => {
@@ -24,11 +24,6 @@ export const createIdea = async (req: Request, res: Response) => {
   var userId = Number(req.headers.user_id ?? 0);
   var updatedSubmittedBy: number[] = submittedBy;
   try {
-    if (updatedSubmittedBy.length == 0) {
-      updatedSubmittedBy = [userId];
-    } else if (!submittedBy.includes[userId]) {
-      updatedSubmittedBy = [userId, ...updatedSubmittedBy];
-    }
     const result = await ideaRepo.createIdea(
       title,
       summary,
@@ -45,6 +40,40 @@ export const createIdea = async (req: Request, res: Response) => {
     res.status(201).json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const createTag = async (req: Request, res: Response) => {
+  try {
+    const { tagName } = req.body;
+
+    if (!tagName || typeof tagName !== "string" || !tagName.trim()) {
+      res.status(400).json({ message: "tagName is required" });
+      return;
+    }
+
+    // Optional: Check for duplicates
+    const existing = await db
+      .select()
+      .from(tags)
+      .where(eq(tags.name, tagName.trim()));
+
+    if (existing.length > 0) {
+      res.status(409).json({ message: "Tag already exists" });
+      return;
+    }
+
+    const [newTag] = await db
+      .insert(tags)
+      .values({
+        name: tagName.trim(),
+      })
+      .returning();
+
+    res.status(201).json(newTag);
+  } catch (error) {
+    console.error("Error creating tag:", error);
+    res.status(500).json({ message: "Failed to create tag" });
   }
 };
 
