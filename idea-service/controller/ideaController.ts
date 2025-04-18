@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { ideaRepo, SortOption, validSortOptions } from "../src/repo/ideasRepo";
 import { mgetViews, storeIdeaCreation } from "../src/redis_client";
+import { db } from "../src/db/db.connection";
+import { tags } from "../src/db/schema";
+import { inArray } from "drizzle-orm";
 
 // Create an idea
 export const createIdea = async (req: Request, res: Response) => {
@@ -42,6 +45,27 @@ export const createIdea = async (req: Request, res: Response) => {
     res.status(201).json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const getTags = async (req: Request, res: Response) => {
+  try {
+    const tagIdsParam = req.query.tagIds as string | null;
+
+    const tagIds = tagIdsParam
+      ?.split(",")
+      .map((id) => Number(id.trim()))
+      .filter((id) => !isNaN(id));
+
+    const result =
+      tagIds?.length ?? 0 > 0
+        ? await db.select().from(tags).where(inArray(tags.id, tagIds!))
+        : await db.select().from(tags);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching tags:", error);
+    res.status(500).json({ message: "Failed to fetch tags" });
   }
 };
 
