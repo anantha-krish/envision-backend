@@ -15,7 +15,7 @@ const router = express.Router();
 
 router
   .get("/:ideaId?", getAllAttachmentsHandler)
-  .post("/:ideaId", upload.array("files", 10), uploadFileHandler)
+  .post("/", upload.array("files", 10), uploadFileHandler)
   .delete("/:ideaId", deleteAttachementHandler);
 
 router.delete("/:ideaId/:fileId", deleteOneAttachementHandler);

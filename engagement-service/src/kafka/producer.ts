@@ -11,7 +11,7 @@ export const producer = kafka.producer();
 
 type KafkaUserMessage = {
   actorId: number;
-  ideaId?: number;
+  ideaId: number;
   type?: string;
   recipients: number[];
   messageText: string;

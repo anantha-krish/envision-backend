@@ -69,10 +69,10 @@ const updateUser = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { username, email, firstName, lastName, role, designation, managerId } =
     req.body;
-
+  const userId = parseInt(id);
   try {
     const updatedUser = await userRepo.updateUser(
-      parseInt(id),
+      userId,
       username,
       email,
       firstName,
@@ -81,12 +81,14 @@ const updateUser = async (req: Request, res: Response) => {
       designation,
       managerId
     );
-
+    /*
     await sendUserUpdateEvent({
-      userId: parseInt(id),
+      actorId: parseInt(id),
+      recipients: [userId],
+      ideaId: -1,
       messageText: `User: ${username} profile details updated.`,
     });
-
+*/
     res.json(updatedUser[0]);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

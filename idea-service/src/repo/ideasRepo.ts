@@ -417,6 +417,15 @@ class IdeaRepository {
       .orderBy(ideaStatus.id);
   }
 
+  async getStatusName(statusId: number) {
+    const [status] = await db
+      .select()
+      .from(ideaStatus)
+      .where(eq(ideaStatus.id, statusId))
+      .limit(1);
+    return status.name;
+  }
+
   async getTopIdeas() {}
 }
 export const ideaRepo = new IdeaRepository();

@@ -7,6 +7,7 @@ import {
 import { AWS_S3_BUCKET_NAME } from "./config/env";
 import { uploadFilesToS3 } from "./uploadFile";
 import { getSignedFileUrl, s3Client } from "./config/s3-config";
+import { sendFileAddedUpdate } from "./producer";
 
 export const uploadFileHandler = async (
   req: Request,
@@ -17,15 +18,47 @@ export const uploadFileHandler = async (
     return;
   }
   try {
-    const ideaId = req.params.ideaId;
+    const ideaId = +(req.query.ideaId ?? "");
+    const isEditMode = req.query.edit === "true";
+    const userId = parseInt((req.headers.user_id as string) ?? "-1");
 
-    if (ideaId.length === 0) {
+    if (isNaN(ideaId)) {
       throw Error("No ideaId found");
     }
     const fileUrls = await uploadFilesToS3(
-      ideaId,
+      ideaId.toString(),
       req.files as Express.Multer.File[]
     );
+
+    if (isEditMode) {
+      const fileNames = req.files.map((file) => file.originalname);
+      let displayNames = "";
+      if (fileNames.length === 1) {
+        displayNames = fileNames[0];
+      } else if (fileNames.length === 2) {
+        displayNames = `${fileNames[0]} and ${fileNames[1]}`;
+      } else if (fileNames.length > 2) {
+        const lastFile = fileNames.pop();
+        displayNames = `${fileNames.join(", ")} and ${lastFile}`;
+      }
+
+      const recipientsMap =
+        req.body.recipients
+          ?.split(",")
+          .map(Number)
+          .filter((id: number) => !isNaN(id)) ?? [];
+
+      const recipients = Array.from(
+        new Set([...recipientsMap, ...(userId > -1 ? [userId] : [])])
+      );
+      await sendFileAddedUpdate({
+        actorId: userId,
+        ideaId: +ideaId,
+        recipients,
+        messageText: `has uploaded ${displayNames}`,
+      });
+    }
+
     res.status(201).json({ message: "Files uploaded successfully!", fileUrls });
   } catch (error) {
     res.status(500).json({ error: "File upload failed!" });

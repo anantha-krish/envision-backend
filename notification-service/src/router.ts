@@ -90,21 +90,29 @@ router.get("/:userId?", async (req, res) => {
       actorsMap.get(notificationId)!.push(actorId);
     });
 
+    const actionMap: Record<string, string> = {
+      LIKE: "liked",
+      COMMENT: "commented",
+      STATUS_CHANGE: "updated the status of",
+    };
+
     // 🔹 Transform Aggregated Notifications
     const transformedAggregated = aggregated.map((notif) => {
       const actorIds = actorsMap.get(notif.id) || [];
+      const action = actionMap[notif.type] || notif.type.toLowerCase();
+      const message =
+        actorIds.length === 1
+          ? `%USER-${actorIds[0]}% ${action} the idea`
+          : `%USER-${actorIds[0]}% and ${
+              actorIds.length - 1
+            } others ${action} the idea`;
       return {
         id: `AGG-${notif.id}`, // Prefix with "AGG-"
         category: "aggregated",
         ideaId: notif.ideaId,
         type: notif.type,
         actorIds, // Store all actor userIds
-        message:
-          actorIds.length === 1
-            ? `%USER-${actorIds[0]}% ${notif.type.toLowerCase()}d the idea`
-            : `%USER-${actorIds[0]}% and ${
-                actorIds.length - 1
-              } others ${notif.type.toLowerCase()}d the idea`,
+        message: message,
 
         count: notif.count,
         updatedAt: notif.updatedAt,
@@ -112,7 +120,6 @@ router.get("/:userId?", async (req, res) => {
       };
     });
 
-    // ✅ Remove Individual Notifications from Response
     const total = transformedAggregated.length;
 
     res.json({

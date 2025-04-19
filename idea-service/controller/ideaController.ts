@@ -4,6 +4,7 @@ import { mgetViews, storeIdeaCreation } from "../src/redis_client";
 import { db } from "../src/db/db.connection";
 import { tags } from "../src/db/schema";
 import { inArray, eq } from "drizzle-orm";
+import { sendStatusUpdate } from "../src/producer";
 
 // Create an idea
 export const createIdea = async (req: Request, res: Response) => {
@@ -178,6 +179,10 @@ export const getIdeaDetails = async (req: Request, res: Response) => {
 export const updateIdeaStatus = async (req: Request, res: Response) => {
   try {
     const ideaId = Number(req.params.id ?? "-1");
+    const userId = parseInt((req.headers.user_id as string) ?? "-1");
+    const recipients = Array.from(
+      new Set([...req.body.recipients, ...(userId > -1 ? [userId] : [])])
+    );
     const { statusId } = req.body;
 
     if (!ideaId || !statusId) {
@@ -191,10 +196,19 @@ export const updateIdeaStatus = async (req: Request, res: Response) => {
       res.status(404).json({ error: "Idea not found" });
       return;
     }
-    // send status Update kafka
-    res
-      .status(200)
-      .json({ message: "Idea status updated successfully", idea: updatedIdea });
+    const status = await ideaRepo.getStatusName(statusId);
+
+    sendStatusUpdate({
+      actorId: userId,
+      ideaId: ideaId,
+      recipients: recipients,
+      messageText: `IDEA-${ideaId} status has been changed to %${status}%`,
+    });
+
+    res.status(200).json({
+      message: "Idea status updated successfully",
+      idea: { updatedIdea, status },
+    });
   } catch (error) {
     console.error("Error updating idea status:", error);
     res.status(500).json({ error: "Internal Server Error" });

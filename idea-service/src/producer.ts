@@ -1,21 +1,17 @@
 import { Kafka, logLevel } from "kafkajs";
-import { KAFKA_BROKER } from ".";
+import { KAFKA_BROKER } from "./config";
 
-const kafka = new Kafka({
-  clientId: "user-service",
+export const kafka = new Kafka({
+  clientId: "idea-service",
   brokers: [KAFKA_BROKER || "localhost:9092"],
   logLevel: logLevel.ERROR,
 });
 
-const producer = kafka.producer();
-
-producer.on("producer.connect", () => {
-  console.log("Kafka producer connected");
-});
+export const producer = kafka.producer();
 
 type KafkaUserMessage = {
   actorId: number;
-  ideaId: number;
+  ideaId?: number;
   type?: string;
   recipients: number[];
   messageText: string;
@@ -34,5 +30,9 @@ const _sendKafkaUserEvent = async (
   await producer.disconnect();
 };
 
-export const sendUserUpdateEvent = async (data: KafkaUserMessage) =>
-  await _sendKafkaUserEvent("notify-user", "USER_PROFILE_UPDATED", data);
+export const sendStatusUpdate = async (data: KafkaUserMessage) => {
+  await _sendKafkaUserEvent("notify-idea", "STATUS_CHANGE_EVENT", {
+    type: "STATUS_CHANGE",
+    ...data,
+  });
+};
