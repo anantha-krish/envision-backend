@@ -18,6 +18,6 @@ router
   .post("/", upload.array("files", 10), uploadFileHandler)
   .delete("/:ideaId", deleteAttachementHandler);
 
-router.delete("/:ideaId/:fileId", deleteOneAttachementHandler);
+router.delete("/*", deleteOneAttachementHandler);
 
 export default router;

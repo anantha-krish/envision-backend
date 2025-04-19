@@ -113,21 +113,17 @@ export const deleteOneAttachementHandler = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const ideaId = req.params.ideaId;
-  const fileId = req.params.fileId;
+  const fileId = req.params[0];
 
-  if (!ideaId || !fileId) {
-    res.status(400).json({ message: "IdeaId & FileId is required" });
+  if (!fileId) {
+    res.status(400).json({ message: "FileId is required" });
     return;
   }
   try {
-    // Construct S3 object key based on the folder structure
-    const fileKey = `idea-uploads/${ideaId}/${fileId}`;
-
     // Delete the file from S3
     const deleteCommand = new DeleteObjectCommand({
       Bucket: AWS_S3_BUCKET_NAME,
-      Key: fileKey,
+      Key: fileId,
     });
 
     await s3Client.send(deleteCommand);
