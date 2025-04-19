@@ -105,6 +105,7 @@ router.get("/:userId?", async (req, res) => {
             : `%USER-${actorIds[0]}% and ${
                 actorIds.length - 1
               } others ${notif.type.toLowerCase()}d the idea`,
+
         count: notif.count,
         updatedAt: notif.updatedAt,
         isRead: notif.isRead,

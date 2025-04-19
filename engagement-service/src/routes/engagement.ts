@@ -17,6 +17,9 @@ const router = Router();
 router.post("/likes/:ideaId", async (req: Request, res: Response) => {
   const userId = parseInt((req.headers.user_id as string) ?? "-1");
   const ideaId = parseInt(req.params.ideaId ?? "-1");
+  const recipients = Array.from(
+    new Set([...req.body.recipients, ...(userId > -1 ? [userId] : [])])
+  );
 
   const existingLike = await db
     .select()
@@ -33,6 +36,7 @@ router.post("/likes/:ideaId", async (req: Request, res: Response) => {
   await sendNewLikeEvent({
     actorId: userId,
     ideaId,
+    recipients,
     messageText: `User: ${userId} liked Idea-${ideaId} `,
   });
   res.status(201).json({ message: "Liked successfully" });
@@ -68,6 +72,9 @@ router.post("/comments/:ideaId", async (req: Request, res: Response) => {
     content: z.string().min(1),
   });
 
+  const recipients = Array.from(
+    new Set([...req.body.recipients, ...(userId > -1 ? [userId] : [])])
+  );
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json(parsed.error);
@@ -81,6 +88,7 @@ router.post("/comments/:ideaId", async (req: Request, res: Response) => {
   await sendNewCommentEvent({
     actorId: userId,
     ideaId,
+    recipients,
     messageText:
       content.length > 50 ? content.substring(0, 50).concat("...") : content,
   });

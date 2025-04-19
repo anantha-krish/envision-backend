@@ -191,7 +191,7 @@ export const updateIdeaStatus = async (req: Request, res: Response) => {
       res.status(404).json({ error: "Idea not found" });
       return;
     }
-
+    // send status Update kafka
     res
       .status(200)
       .json({ message: "Idea status updated successfully", idea: updatedIdea });

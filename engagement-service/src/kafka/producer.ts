@@ -13,6 +13,7 @@ type KafkaUserMessage = {
   actorId: number;
   ideaId?: number;
   type?: string;
+  recipients: number[];
   messageText: string;
 };
 

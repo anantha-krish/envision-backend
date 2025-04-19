@@ -27,13 +27,7 @@ export const consumeMessages = async () => {
   await consumer.run({
     eachMessage: async ({ message }) => {
       const data = JSON.parse(message.value?.toString() || "{}");
-      const {
-        actorId,
-        ideaId,
-        type,
-        recipients = [1, 2, actorId],
-        messageText,
-      } = data;
+      const { actorId, ideaId, type, recipients, messageText } = data;
 
       console.log(`Received: ${JSON.stringify(data)}`);
 
