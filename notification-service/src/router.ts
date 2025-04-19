@@ -91,10 +91,10 @@ router.get("/:userId?", async (req, res) => {
     });
 
     const actionMap: Record<string, string> = {
-      LIKE: "liked",
-      COMMENT: "commented",
-      STATUS_CHANGE: "updated the status of",
-      FILE_ADDED: "has updated attachements of",
+      LIKE: "liked the idea",
+      COMMENT: "commented on the idea",
+      STATUS_CHANGE: "has updated the status",
+      FILE_ADDED: "has updated the attachments",
     };
 
     // 🔹 Transform Aggregated Notifications
@@ -103,10 +103,10 @@ router.get("/:userId?", async (req, res) => {
       const action = actionMap[notif.type] || notif.type.toLowerCase();
       const message =
         actorIds.length === 1
-          ? `%USER-${actorIds[0]}% ${action} the `
+          ? `%USER-${actorIds[0]}% ${action}. `
           : `%USER-${actorIds[0]}% and ${
               actorIds.length - 1
-            } others ${action} the `;
+            } others ${action}.`;
       return {
         id: `AGG-${notif.id}`, // Prefix with "AGG-"
         category: "aggregated",
