@@ -28,11 +28,16 @@ class PocTeamRepository {
       .returning();
   };
 
-  // Get POC Team by Idea ID
   getPocTeamByIdeaId = async (ideaId: number) => {
-    return db
-      .select()
-      .from(pocTeams)
+    return await db
+      .select({
+        userId: pocTeamMembers.userId,
+        role: pocTeamMembers.role,
+        teamName: pocTeams.name,
+        ideaId: pocTeams.ideaId,
+      })
+      .from(pocTeamMembers)
+      .innerJoin(pocTeams, eq(pocTeamMembers.teamId, pocTeams.id))
       .where(eq(pocTeams.ideaId, ideaId))
       .limit(1);
   };

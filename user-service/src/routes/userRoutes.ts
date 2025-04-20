@@ -3,9 +3,9 @@ import { Router } from "express";
 import {
   createUser,
   deleteUser,
+  filtersUsers,
   getAllDesignations,
   getAllRoles,
-  getAllUsersByRoleCode as filterUsers,
   getUsers,
   loginUser,
   logOut,
@@ -23,7 +23,7 @@ router.post("/register", createUser);
 router.patch("/:id", authenticateJwt, updateUser);
 router.delete("/:id", authenticateJwt, deleteUser);
 router.post("/login", loginUser);
-router.get("/", filterUsers);
+router.get("/", filtersUsers);
 router.get("/roles", getAllRoles);
 router.get("/designations", getAllDesignations);
 router.get("/logout", authenticateJwt, logOut);

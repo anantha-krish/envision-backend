@@ -33,8 +33,7 @@ export const pocTeams = pgTable("poc_teams", {
   id: serial("id").primaryKey(),
   ideaId: integer("idea_id")
     .unique()
-    .notNull()
-    .references(() => ideas.id, { onDelete: "cascade" }),
+    .references(() => ideas.id),
   name: varchar("name", { length: 255 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });

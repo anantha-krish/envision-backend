@@ -213,12 +213,12 @@ const refreshAccessToken = async (req: Request, res: Response) => {
 const filtersUsers = async (req: Request, res: Response) => {
   try {
     const roleCode = req.query.roleCode as string;
-    let userIds = ((req.query.userIds ?? "") as string).split(",");
+    let userIds = (req.query.userIds ?? "") as string;
     let extended = req.query.extended as string;
 
-    const users = userIds.map(Number);
+    const users = userIds.split(",").map(Number);
     let results;
-    if (users.length > 0) {
+    if (userIds.length > 0) {
       if (extended === "true") {
         results = await userRepo.getAllUsers(users);
       } else {
@@ -260,7 +260,7 @@ export {
   logOut,
   refreshAccessToken,
   updateUser,
-  filtersUsers as getAllUsersByRoleCode,
+  filtersUsers,
   getAllRoles,
   getAllDesignations,
 };

@@ -50,6 +50,13 @@
       "when": 1743447493602,
       "tag": "0006_eager_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1745179301176,
+      "tag": "0007_steady_daredevil",
+      "breakpoints": true
     }
   ]
 }

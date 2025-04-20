@@ -35,16 +35,31 @@ export const assignIdea = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllPocTeams = async (req: Request, res: Response) => {
+export const getPocTeamforIdea = async (req: Request, res: Response) => {
   try {
+    const ideaIdParam = req.query.ideaId;
+
+    if (ideaIdParam !== undefined) {
+      const ideaId = Number(ideaIdParam);
+      if (isNaN(ideaId) || ideaId <= 0) {
+        res.status(400).json({ error: "Invalid ideaId provided." });
+        return;
+      }
+
+      const result = await pocTeamRepo.getPocTeamByIdeaId(ideaId);
+      res.status(200).json(result);
+      return;
+    }
+
     const teams = await pocTeamRepo.getAllPocTeams();
-    res.json(teams);
+    res.status(200).json(teams);
+    return;
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching POC teams:", error);
     res.status(500).json({ error: "Failed to fetch POC teams" });
+    return;
   }
 };
-
 export const getTeamMembers = async (req: Request, res: Response) => {
   try {
     const { teamId } = req.params;

@@ -290,6 +290,7 @@ class UserRepository {
       .innerJoin(roles, eq(userProfiles.roleId, roles.id))
       .where(eq(roles.roleCode, roleCode));
   }
+
   async getAllUsersByUserId(userIds: number[]) {
     return await db
       .select({

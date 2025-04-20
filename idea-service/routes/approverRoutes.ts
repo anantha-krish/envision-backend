@@ -8,9 +8,9 @@ import {
 
 const router = Router();
 
-router.post("assign", assignApprovers);
+router.post("/assign", assignApprovers);
 router.delete("remove", removeApprover);
-router.get(":ideaId", getApprovers);
+router.get("/:ideaId", getApprovers);
 router.get("/assigned-ideas/:userId", getIdeasAssignedForApproval);
 
 export default router;
