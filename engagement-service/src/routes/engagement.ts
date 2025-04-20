@@ -18,7 +18,7 @@ router.post("/likes/:ideaId", async (req: Request, res: Response) => {
   const userId = parseInt((req.headers.user_id as string) ?? "-1");
   const ideaId = parseInt(req.params.ideaId ?? "-1");
   const recipients = Array.from(
-    new Set([...req.body.recipients, ...(userId > -1 ? [userId] : [])])
+    new Set([...(req.body.recipients ?? []), ...(userId > -1 ? [userId] : [])])
   );
 
   const existingLike = await db
@@ -27,19 +27,23 @@ router.post("/likes/:ideaId", async (req: Request, res: Response) => {
     .where(and(eq(likes.userId, userId), eq(likes.ideaId, ideaId)));
 
   if (existingLike.length > 0) {
-    res.status(400).json({ message: "Already liked" });
+    await db
+      .delete(likes)
+      .where(and(eq(likes.userId, userId), eq(likes.ideaId, ideaId)));
+    await decrementLikes(ideaId);
+    res.status(200).json({ liked: false, message: "Unliked Successfully" });
     return;
+  } else {
+    await db.insert(likes).values({ userId, ideaId });
+    await incrementLikes(ideaId);
+    await sendNewLikeEvent({
+      actorId: userId,
+      ideaId,
+      recipients,
+      messageText: `User: ${userId} liked Idea-${ideaId} `,
+    });
+    res.status(201).json({ liked: true, message: "Liked Successfully" });
   }
-
-  await db.insert(likes).values({ userId, ideaId });
-  await incrementLikes(ideaId);
-  await sendNewLikeEvent({
-    actorId: userId,
-    ideaId,
-    recipients,
-    messageText: `User: ${userId} liked Idea-${ideaId} `,
-  });
-  res.status(201).json({ message: "Liked successfully" });
 });
 
 // Unlike an Idea
