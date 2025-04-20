@@ -38,6 +38,7 @@ export const validSortOptions = [
   "recent",
 ] as const;
 export type SortOption = (typeof validSortOptions)[number];
+export type SortOrder = "ASC" | "DESC";
 class IdeaRepository {
   async createIdea(
     title: string,
@@ -199,29 +200,32 @@ class IdeaRepository {
       .returning();
   }
 
-  _getOrderByClause = (sortBy: SortOption) => {
+  _getOrderByClause = (sortBy: SortOption, sortOrder: SortOrder) => {
+    const order = sortOrder === "ASC" ? sql.raw("ASC") : sql.raw("DESC");
+
     switch (sortBy) {
       case "popular":
-        return sql`(${ideas.likesCount} + ${ideas.commentsCount}) DESC`;
+        return sql`(${ideas.likesCount} + ${ideas.commentsCount}) ${order}`;
       case "trend":
-        return sql`(${ideas.likesCount} + ${ideas.commentsCount})::float / EXTRACT(EPOCH FROM (NOW() - ${ideas.createdAt})) DESC`;
+        return sql`(${ideas.likesCount} + ${ideas.commentsCount})::float / EXTRACT(EPOCH FROM (NOW() - ${ideas.createdAt})) ${order}`;
       case "most_liked":
-        return sql`${ideas.likesCount} DESC`;
+        return sql`${ideas.likesCount} ${order}`;
       case "most_viewed":
-        return sql`${ideas.views} DESC`;
+        return sql`${ideas.views} ${order}`;
       case "recent":
       default:
-        return sql`${ideas.createdAt} DESC`;
+        return sql`${ideas.createdAt} ${order}`;
     }
   };
 
   async getAllIdeas(
     page: number = 1,
     pageSize: number = 10,
-    sortBy: SortOption
+    sortBy: SortOption,
+    sortOrder: SortOrder
   ) {
     const offset = (page - 1) * pageSize;
-    const orderBy = this._getOrderByClause(sortBy);
+    const orderBy = this._getOrderByClause(sortBy, sortOrder);
 
     return await db
       .select({

@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
-import { ideaRepo, SortOption, validSortOptions } from "../src/repo/ideasRepo";
+import {
+  ideaRepo,
+  SortOption,
+  SortOrder,
+  validSortOptions,
+} from "../src/repo/ideasRepo";
 import { mgetViews, storeIdeaCreation } from "../src/redis_client";
 import { db } from "../src/db/db.connection";
 import { tags } from "../src/db/schema";
@@ -105,12 +110,22 @@ export const getAllIdeas = async (req: Request, res: Response) => {
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 10);
     const sortByQuery = req.query.sortBy as string | undefined;
+    const sortOrderQuery = req.query.sortOrder;
+    const sortOrder = ["ASC", "DESC"].includes(sortOrderQuery as SortOrder)
+      ? (sortOrderQuery as SortOrder)
+      : "DESC";
     const sortBy: SortOption = validSortOptions.includes(
       sortByQuery as SortOption
     )
       ? (sortByQuery as SortOption)
       : "recent";
-    const ideasList = await ideaRepo.getAllIdeas(page, pageSize, sortBy);
+
+    const ideasList = await ideaRepo.getAllIdeas(
+      page,
+      pageSize,
+      sortBy,
+      sortOrder
+    );
     if (ideasList.length === 0) {
       res.status(200).json({});
       return;
