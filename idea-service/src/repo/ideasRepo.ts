@@ -99,7 +99,7 @@ class IdeaRepository {
         title: ideas.title,
         summary: ideas.summary,
         description: ideas.description,
-        status: ideaStatus.name, // Get status text
+        statusName: ideaStatus.name, // Get status text
         likes: ideas.likesCount,
         comments: ideas.commentsCount,
         views: ideas.views,
@@ -233,7 +233,7 @@ class IdeaRepository {
         id: ideas.id,
         title: ideas.title,
         summary: ideas.summary,
-        status: ideaStatus.name,
+        statusName: ideaStatus.name,
         likes: ideas.likesCount,
         comments: ideas.commentsCount,
         views: ideas.views,
@@ -438,7 +438,7 @@ class IdeaRepository {
         id: ideas.id,
         title: ideas.title,
         summary: ideas.summary,
-        status: ideaStatus.name,
+        statusName: ideaStatus.name,
         likes: ideas.likesCount,
         comments: ideas.commentsCount,
         views: ideas.views,
@@ -468,7 +468,7 @@ class IdeaRepository {
   async getIdeaStatusDistribution() {
     return await db
       .select({
-        status: ideaStatus.name,
+        statusName: ideaStatus.name,
         count: count(),
       })
       .from(ideas)

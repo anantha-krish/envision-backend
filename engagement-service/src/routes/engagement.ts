@@ -13,7 +13,6 @@ import {
 
 const router = Router();
 
-// Like an Idea
 router.post("/likes/:ideaId", async (req: Request, res: Response) => {
   const userId = parseInt((req.headers.user_id as string) ?? "-1");
   const ideaId = parseInt(req.params.ideaId ?? "-1");
@@ -23,38 +22,50 @@ router.post("/likes/:ideaId", async (req: Request, res: Response) => {
 
   const [result] = await db
     .select({
-      totalCount: sql<number>`COUNT(*) FILTER (WHERE ${likes.ideaId} = ${ideaId})`,
       isLiked: sql<number>`COUNT(*) FILTER (WHERE ${likes.ideaId} = ${ideaId} AND ${likes.userId} = ${userId})`,
     })
     .from(likes);
 
-  const totalCount = result.totalCount;
   const alreadyLiked = result.isLiked > 0;
 
   if (alreadyLiked) {
     await db
       .delete(likes)
       .where(and(eq(likes.userId, userId), eq(likes.ideaId, ideaId)));
+
     await decrementLikes(ideaId);
+
+    const [updatedCount] = await db
+      .select({
+        totalCount: sql<number>`COUNT(*) FILTER (WHERE ${likes.ideaId} = ${ideaId})`,
+      })
+      .from(likes);
+
     res.status(200).json({
       liked: false,
-      totalCount: totalCount - 1,
+      totalCount: updatedCount.totalCount,
       message: "Unliked Successfully",
     });
-    return;
   } else {
     await db.insert(likes).values({ userId, ideaId });
     await incrementLikes(ideaId);
+
     await sendNewLikeEvent({
       actorId: userId,
       ideaId,
       recipients,
-
-      messageText: `User: ${userId} liked Idea-${ideaId} `,
+      messageText: `User: ${userId} liked Idea-${ideaId}`,
     });
+
+    const [updatedCount] = await db
+      .select({
+        totalCount: sql<number>`COUNT(*) FILTER (WHERE ${likes.ideaId} = ${ideaId})`,
+      })
+      .from(likes);
+
     res.status(201).json({
       liked: true,
-      totalCount: +totalCount + 1,
+      totalCount: updatedCount.totalCount,
       message: "Liked Successfully",
     });
   }
