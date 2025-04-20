@@ -1,21 +1,19 @@
 import { Router } from "express";
 import {
   createIdea,
-  getAllIdeas,
   updateIdea,
   getIdeaDetails,
   updateIdeaStatus,
   getTags,
   createTag,
-  getAllIdeasNew,
+  getAllIdeas,
 } from "../controller/ideaController";
 import { getTrendingIdeas } from "../src/redis_client";
 
 const router = Router();
 
 router.post("/", createIdea); // Create an idea with tags
-//router.get("/", getAllIdeas); // Get all ideas with tags
-router.get("/", getAllIdeasNew);
+router.get("/", getAllIdeas);
 router.get("/tags", getTags);
 router.post("/tags", createTag);
 router.get("/trending", async (req, res) => {

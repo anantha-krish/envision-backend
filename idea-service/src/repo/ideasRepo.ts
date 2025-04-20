@@ -398,20 +398,31 @@ class IdeaRepository {
       .orderBy(sql`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`);
   }
 
-  getMatchedIdeaIds = async (searchQuery: string) => {
-    return await db
-      .selectDistinct({ id: ideas.id })
+  getMatchedIdeaIds = async (searchQuery: string, statusCode: string) => {
+    const conditions: any = [];
+
+    if (searchQuery && searchQuery.length >= 2) {
+      conditions.push(
+        or(
+          like(ideas.title, `%${searchQuery}%`),
+          like(tags.name, `%${searchQuery}%`)
+        )
+      );
+    }
+
+    if (statusCode.length > 1) {
+      conditions.push(eq(ideaStatus.name, statusCode));
+    }
+
+    const result = await db
+      .select({ id: ideas.id })
       .from(ideas)
+      .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id))
       .leftJoin(ideaTags, eq(ideas.id, ideaTags.ideaId))
       .leftJoin(tags, eq(ideaTags.tagId, tags.id))
-      .where(
-        searchQuery?.length >= 2
-          ? or(
-              like(ideas.title, `%${searchQuery}%`),
-              like(tags.name, `%${searchQuery}%`)
-            )
-          : undefined
-      );
+      .where(conditions.length > 0 ? and(...conditions) : sql`true`);
+
+    return result;
   };
 
   getAllIdeasByIDs = async (

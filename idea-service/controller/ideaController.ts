@@ -104,13 +104,14 @@ export const getTags = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllIdeasNew = async (req: Request, res: Response) => {
+export const getAllIdeas = async (req: Request, res: Response) => {
   try {
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 10);
     const sortByQuery = req.query.sortBy as string | undefined;
     const sortOrderQuery = req.query.sortOrder;
     const searchQuery = (req.query.search ?? "") as string;
+    const statusCode = (req.query.statusCode ?? "") as string;
     const sortOrder = ["ASC", "DESC"].includes(sortOrderQuery as SortOrder)
       ? (sortOrderQuery as SortOrder)
       : "DESC";
@@ -120,7 +121,10 @@ export const getAllIdeasNew = async (req: Request, res: Response) => {
       ? (sortByQuery as SortOption)
       : "recent";
 
-    const matchedIds = await ideaRepo.getMatchedIdeaIds(searchQuery);
+    const matchedIds = await ideaRepo.getMatchedIdeaIds(
+      searchQuery,
+      statusCode
+    );
 
     const ids = matchedIds.map((r) => r.id);
 
@@ -152,80 +156,6 @@ export const getAllIdeasNew = async (req: Request, res: Response) => {
       };
     });
 
-    res.status(200).json({
-      totalCount: finalResults.length,
-      ideas: finalResults,
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Get all ideas
-export const getAllIdeas = async (req: Request, res: Response) => {
-  try {
-    const page = Number(req.query.page ?? 1);
-    const pageSize = Number(req.query.pageSize ?? 10);
-    const sortByQuery = req.query.sortBy as string | undefined;
-    const sortOrderQuery = req.query.sortOrder;
-    const searchQuery = (req.query.search ?? "") as string;
-    const sortOrder = ["ASC", "DESC"].includes(sortOrderQuery as SortOrder)
-      ? (sortOrderQuery as SortOrder)
-      : "DESC";
-    const sortBy: SortOption = validSortOptions.includes(
-      sortByQuery as SortOption
-    )
-      ? (sortByQuery as SortOption)
-      : "recent";
-
-    const ideasList = await ideaRepo.getAllIdeas(
-      page,
-      pageSize,
-      sortBy,
-      sortOrder
-    );
-    if (ideasList.length === 0) {
-      res.status(200).json({});
-      return;
-    }
-
-    const ideaIds = ideasList.map((idea) => idea.id);
-
-    const tagResults = await ideaRepo.fetchTagsForIdeas(ideaIds);
-
-    // Process tags mapping
-    const tagsMap: Record<number, string[]> = {};
-    tagResults.forEach(({ ideaId, tagName }) => {
-      if (!tagsMap[ideaId]) tagsMap[ideaId] = [];
-      tagsMap[ideaId].push(tagName);
-    });
-
-    let filteredResults = ideasList;
-
-    if (searchQuery && searchQuery.length >= 2) {
-      // Apply search filter for title or tags
-      filteredResults = ideasList.filter((idea) => {
-        // Check if the idea title contains the search query
-        const titleMatch = idea.title
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase());
-
-        // Check if the idea's tags match the search query
-        const tagsMatch = tagsMap[idea.id]?.some((tag) =>
-          tag.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-
-        // Return true if title or tags match the search query
-        return titleMatch || tagsMatch;
-      });
-    }
-
-    const finalResults = filteredResults.map((idea, index) => {
-      return {
-        ...idea,
-        tags: tagsMap[idea.id] || [],
-      };
-    });
     res.status(200).json({
       totalCount: finalResults.length,
       ideas: finalResults,
