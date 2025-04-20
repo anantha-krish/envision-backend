@@ -119,19 +119,43 @@ export const getAllIdeasNew = async (req: Request, res: Response) => {
     )
       ? (sortByQuery as SortOption)
       : "recent";
-    let results;
+
     const matchedIds = await ideaRepo.getMatchedIdeaIds(searchQuery);
+
     const ids = matchedIds.map((r) => r.id);
 
-    if (ids.length === 0) results = []; // no results
-    results = await ideaRepo.getAllIdeasByIDs(
+    if (ids.length === 0) {
+      res.status(200).json([]);
+      return;
+    }
+    const results = await ideaRepo.getAllIdeasByIDs(
       ids,
       sortBy,
       sortOrder,
       page,
       pageSize
     );
-    res.status(200).json(results);
+    const ideaIds = results.map((idea) => idea.id);
+
+    const tagResults = await ideaRepo.fetchTagsForIdeas(ideaIds);
+
+    // Process tags mapping
+    const tagsMap: Record<number, { tagId: number; tagName: string }[]> = {};
+    tagResults.forEach(({ ideaId, tagName, tagId }) => {
+      if (!tagsMap[ideaId]) tagsMap[ideaId] = [];
+      tagsMap[ideaId].push({ tagId, tagName });
+    });
+    const finalResults = results.map((idea, index) => {
+      return {
+        ...idea,
+        tags: tagsMap[idea.id] || [],
+      };
+    });
+
+    res.status(200).json({
+      totalCount: finalResults.length,
+      ideas: finalResults,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

@@ -375,7 +375,7 @@ class IdeaRepository {
   async fetchTagsForIdeas(ideaIds) {
     // Fetch tags
     return await db
-      .select({ ideaId: ideaTags.ideaId, tagName: tags.name })
+      .select({ ideaId: ideaTags.ideaId, tagId: tags.id, tagName: tags.name })
       .from(ideaTags)
       .innerJoin(tags, eq(ideaTags.tagId, tags.id))
       .where(inArray(ideaTags.ideaId, ideaIds));
