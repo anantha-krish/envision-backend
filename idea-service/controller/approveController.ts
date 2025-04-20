@@ -40,7 +40,7 @@ export const removeApprover = async (req: Request, res: Response) => {
 
 export const getApprovers = async (req: Request, res: Response) => {
   try {
-    const { ideaId } = req.params;
+    const { ideaId } = req.query;
     if (!ideaId) {
       res.status(400).json({ error: "ideaId is required" });
       return;
