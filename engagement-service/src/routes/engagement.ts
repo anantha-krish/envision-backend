@@ -21,17 +21,26 @@ router.post("/likes/:ideaId", async (req: Request, res: Response) => {
     new Set([...(req.body.recipients ?? []), ...(userId > -1 ? [userId] : [])])
   );
 
-  const existingLike = await db
-    .select()
-    .from(likes)
-    .where(and(eq(likes.userId, userId), eq(likes.ideaId, ideaId)));
+  const [result] = await db
+    .select({
+      totalCount: sql<number>`COUNT(*) FILTER (WHERE ${likes.ideaId} = ${ideaId})`,
+      isLiked: sql<number>`COUNT(*) FILTER (WHERE ${likes.ideaId} = ${ideaId} AND ${likes.userId} = ${userId})`,
+    })
+    .from(likes);
 
-  if (existingLike.length > 0) {
+  const totalCount = result.totalCount;
+  const alreadyLiked = result.isLiked > 0;
+
+  if (alreadyLiked) {
     await db
       .delete(likes)
       .where(and(eq(likes.userId, userId), eq(likes.ideaId, ideaId)));
     await decrementLikes(ideaId);
-    res.status(200).json({ liked: false, message: "Unliked Successfully" });
+    res.status(200).json({
+      liked: false,
+      totalCount: totalCount - 1,
+      message: "Unliked Successfully",
+    });
     return;
   } else {
     await db.insert(likes).values({ userId, ideaId });
@@ -40,9 +49,14 @@ router.post("/likes/:ideaId", async (req: Request, res: Response) => {
       actorId: userId,
       ideaId,
       recipients,
+
       messageText: `User: ${userId} liked Idea-${ideaId} `,
     });
-    res.status(201).json({ liked: true, message: "Liked Successfully" });
+    res.status(201).json({
+      liked: true,
+      totalCount: +totalCount + 1,
+      message: "Liked Successfully",
+    });
   }
 });
 
@@ -66,6 +80,18 @@ router.get("/likes/:ideaId", async (req: Request, res: Response) => {
     .from(likes)
     .where(eq(likes.ideaId, ideaId));
   res.json({ likes: totalLikes.length });
+});
+
+router.get("/likes/:ideaId/status", async (req: Request, res: Response) => {
+  const userId = parseInt((req.headers.user_id as string) ?? "-1");
+  const ideaId = parseInt(req.params.ideaId ?? "-1");
+
+  const [{ count: likeCount }] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(likes)
+    .where(and(eq(likes.ideaId, ideaId), eq(likes.userId, userId)));
+
+  res.json({ liked: likeCount > 0 });
 });
 
 // Add a Comment
