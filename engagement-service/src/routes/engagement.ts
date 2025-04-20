@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import { db } from "../db/db.connection";
 import { likes, comments } from "../db/schema";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray, desc } from "drizzle-orm";
 import { z } from "zod";
 import { sendNewCommentEvent, sendNewLikeEvent } from "../kafka/producer";
 import {
@@ -83,7 +83,10 @@ router.post("/comments/:ideaId", async (req: Request, res: Response) => {
 
   const { content } = parsed.data;
 
-  await db.insert(comments).values({ userId, ideaId, content });
+  var [result] = await db
+    .insert(comments)
+    .values({ userId, ideaId, content })
+    .returning();
   await incrementComments(ideaId);
   await sendNewCommentEvent({
     actorId: userId,
@@ -92,7 +95,7 @@ router.post("/comments/:ideaId", async (req: Request, res: Response) => {
     messageText:
       content.length > 50 ? content.substring(0, 50).concat("...") : content,
   });
-  res.status(201).json({ message: "Comment added" });
+  res.status(201).json(result);
 });
 
 // Get Comments (Latest 5, Paginated)
@@ -104,7 +107,7 @@ router.get("/comments/:ideaId", async (req: Request, res: Response) => {
     .select()
     .from(comments)
     .where(eq(comments.ideaId, parseInt(ideaId ?? "-1")))
-    .orderBy(comments.createdAt)
+    .orderBy(desc(comments.createdAt))
     .offset((Number(page) - 1) * Number(limit))
     .limit(Number(limit));
 
