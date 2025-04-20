@@ -213,16 +213,17 @@ const refreshAccessToken = async (req: Request, res: Response) => {
 const filtersUsers = async (req: Request, res: Response) => {
   try {
     const roleCode = req.query.roleCode as string;
-    let userIds = req.query.userIds as string[];
-    if (userIds && !Array.isArray(userIds)) {
-      userIds = [userIds];
-    } else {
-      userIds = [];
-    }
+    let userIds = ((req.query.userIds ?? "") as string).split(",");
+    let extended = req.query.extended as string;
 
+    const users = userIds.map(Number);
     let results;
-    if (userIds.length > 0) {
-      results = await userRepo.getAllUsersByUserId(userIds.map(Number));
+    if (users.length > 0) {
+      if (extended === "true") {
+        results = await userRepo.getAllUsers(users);
+      } else {
+        results = await userRepo.getAllUsersByUserId(users);
+      }
     } else if (roleCode && userIds.length == 0) {
       results = await userRepo.getAllUsersByRoleCode(roleCode);
     } else {

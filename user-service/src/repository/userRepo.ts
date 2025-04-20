@@ -11,8 +11,8 @@ import { use } from "passport";
 
 class UserRepository {
   // 🔹 Fetch All Users with Profiles & Manager Info
-  async getAllUsers() {
-    return await db
+  async getAllUsers(userIds?: number[]) {
+    const query = db
       .select({
         userId: users.id,
         username: users.username,
@@ -28,6 +28,10 @@ class UserRepository {
       .leftJoin(roles, eq(userProfiles.roleId, roles.id))
       .leftJoin(designations, eq(userProfiles.designationId, designations.id))
       .leftJoin(userManagers, eq(users.id, userManagers.userId));
+    if (userIds && userIds.length > 0) {
+      query.where(inArray(users.id, userIds));
+    }
+    return await query;
   }
 
   async getUserById(id: number) {
