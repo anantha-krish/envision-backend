@@ -38,8 +38,7 @@ class PocTeamRepository {
       })
       .from(pocTeamMembers)
       .innerJoin(pocTeams, eq(pocTeamMembers.teamId, pocTeams.id))
-      .where(eq(pocTeams.ideaId, ideaId))
-      .limit(1);
+      .where(eq(pocTeams.ideaId, ideaId));
   };
 
   // Delete POC Team
