@@ -13,6 +13,7 @@ import {
   desc,
   count,
   and,
+  or,
   gte,
   lte,
   like,
@@ -396,6 +397,50 @@ class IdeaRepository {
       .groupBy(sql`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`)
       .orderBy(sql`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`);
   }
+
+  getMatchedIdeaIds = async (searchQuery: string) => {
+    return await db
+      .selectDistinct({ id: ideas.id })
+      .from(ideas)
+      .leftJoin(ideaTags, eq(ideas.id, ideaTags.ideaId))
+      .leftJoin(tags, eq(ideaTags.tagId, tags.id))
+      .where(
+        searchQuery?.length >= 2
+          ? or(
+              like(ideas.title, `%${searchQuery}%`),
+              like(tags.name, `%${searchQuery}%`)
+            )
+          : undefined
+      );
+  };
+
+  getAllIdeasByIDs = async (
+    ideaIds: number[],
+    sortBy: SortOption,
+    sortOrder: SortOrder,
+    page: number = 1,
+    pageSize: number = 10
+  ) => {
+    const offset = (page - 1) * pageSize;
+    const result = await db
+      .select({
+        id: ideas.id,
+        title: ideas.title,
+        summary: ideas.summary,
+        status: ideaStatus.name,
+        likes: ideas.likesCount,
+        comments: ideas.commentsCount,
+        views: ideas.views,
+        createdAt: ideas.createdAt,
+      })
+      .from(ideas)
+      .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id))
+      .where(inArray(ideas.id, ideaIds))
+      .orderBy(this._getOrderByClause(sortBy, sortOrder))
+      .limit(pageSize)
+      .offset(offset);
+    return result;
+  };
 
   async getTopContributors() {
     return await db

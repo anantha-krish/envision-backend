@@ -7,13 +7,15 @@ import {
   updateIdeaStatus,
   getTags,
   createTag,
+  getAllIdeasNew,
 } from "../controller/ideaController";
 import { getTrendingIdeas } from "../src/redis_client";
 
 const router = Router();
 
 router.post("/", createIdea); // Create an idea with tags
-router.get("/", getAllIdeas); // Get all ideas with tags
+//router.get("/", getAllIdeas); // Get all ideas with tags
+router.get("/", getAllIdeasNew);
 router.get("/tags", getTags);
 router.post("/tags", createTag);
 router.get("/trending", async (req, res) => {
