@@ -25,6 +25,7 @@ export const uploadFileHandler = async (
     if (isNaN(ideaId)) {
       throw Error("No ideaId found");
     }
+
     const fileUrls = await uploadFilesToS3(
       ideaId.toString(),
       req.files as Express.Multer.File[]
@@ -43,10 +44,10 @@ export const uploadFileHandler = async (
       }
 
       const recipientsMap =
-        req.body.recipients
+        ((req.query.recipients as string) ?? "")
           ?.split(",")
           .map(Number)
-          .filter((id: number) => !isNaN(id)) ?? [];
+          .filter((id: number) => !isNaN(id) || id < 1) ?? [];
 
       const recipients = Array.from(
         new Set([...recipientsMap, ...(userId > -1 ? [userId] : [])])
@@ -138,14 +139,12 @@ export const getAllAttachments = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const ideaId = req.params.ideaId ?? "";
+  const ideaId = +(req.params.ideaId ?? "");
   try {
     const data = await s3Client.send(
       new ListObjectsV2Command({
         Bucket: AWS_S3_BUCKET_NAME,
-        ...(ideaId && ideaId.length > 0
-          ? { Prefix: `idea-uploads/${ideaId}` }
-          : {}),
+        ...(ideaId > 0 ? { Prefix: `idea-uploads/${ideaId}` } : {}),
       })
     );
     const files = data.Contents

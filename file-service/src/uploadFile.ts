@@ -21,7 +21,11 @@ export const uploadFilesToS3 = async (
       ContentType: file.mimetype,
     };
 
-    await s3Client.send(new PutObjectCommand(uploadParams));
+    try {
+      await s3Client.send(new PutObjectCommand(uploadParams));
+    } catch (error) {
+      console.error("Upload failed:", error);
+    }
 
     return `https://${AWS_S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${fileKey}`;
   });

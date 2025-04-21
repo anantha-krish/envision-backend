@@ -35,7 +35,7 @@ export const getIdeaStatusDistribution = async (
 };
 
 export const getTopIdeas = async (req: Request, res: Response) => {
-  const ideasList = await ideaRepo.getAllIdeas(1, 10, "popular", "DESC");
+  const ideasList = await ideaRepo.getAllIdeas(1, 3, "popular", "DESC");
   if (ideasList.length === 0) {
     res.status(200).json({});
     return;

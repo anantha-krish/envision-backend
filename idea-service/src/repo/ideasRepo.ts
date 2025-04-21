@@ -432,7 +432,7 @@ class IdeaRepository {
     }
 
     // Status filter condition
-    if (statusCode) {
+    if (statusCode && statusCode.length > 2) {
       whereConditions.push(eq(ideaStatus.name, statusCode));
     }
 
