@@ -16,6 +16,7 @@ import {
   or,
   gte,
   lte,
+  ilike,
   like,
 } from "drizzle-orm";
 import {
@@ -398,20 +399,41 @@ class IdeaRepository {
       .orderBy(sql`TO_CHAR(${ideas.createdAt}, 'YYYY-MM-DD')`);
   }
 
-  getMatchedIdeaIds = async (searchQuery: string, statusCode: string) => {
-    const conditions: any = [];
+  getMatchedIdeaIds = async (
+    searchQuery: string,
+    tagList: string[],
+    statusCode: string,
+    andLogicForTags: boolean = false
+  ) => {
+    const whereConditions: any[] = [];
 
-    if (searchQuery && searchQuery.length >= 2) {
-      conditions.push(
-        or(
-          like(ideas.title, `%${searchQuery}%`),
-          like(tags.name, `%${searchQuery}%`)
-        )
-      );
+    // Tags condition block
+    if (tagList.length > 0) {
+      if (andLogicForTags) {
+        // AND logic: must match all tags
+        for (const tag of tagList) {
+          whereConditions.push(
+            sql`EXISTS (
+            SELECT 1 FROM idea_tags it
+            JOIN tags t ON t.id = it.tag_id
+            WHERE it.idea_id = ${ideas.id} AND t.name = ${tag}
+          )`
+          );
+        }
+      } else {
+        // OR logic: any tag match
+        whereConditions.push(inArray(tags.name, tagList));
+      }
     }
 
-    if (statusCode.length > 1) {
-      conditions.push(eq(ideaStatus.name, statusCode));
+    // Title search condition
+    if (searchQuery.length >= 2) {
+      whereConditions.push(like(ideas.title, `%${searchQuery}%`));
+    }
+
+    // Status filter condition
+    if (statusCode) {
+      whereConditions.push(eq(ideaStatus.name, statusCode));
     }
 
     const result = await db
@@ -420,9 +442,10 @@ class IdeaRepository {
       .innerJoin(ideaStatus, eq(ideas.statusId, ideaStatus.id))
       .leftJoin(ideaTags, eq(ideas.id, ideaTags.ideaId))
       .leftJoin(tags, eq(ideaTags.tagId, tags.id))
-      .where(conditions.length > 0 ? and(...conditions) : sql`true`);
+      .where(and(...whereConditions))
+      .groupBy(ideas.id);
 
-    return result;
+    return result.map((r) => r.id);
   };
 
   getAllIdeasByIDs = async (

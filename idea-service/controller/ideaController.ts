@@ -109,9 +109,14 @@ export const getAllIdeas = async (req: Request, res: Response) => {
     const page = Number(req.query.page ?? 1);
     const pageSize = Number(req.query.pageSize ?? 10);
     const sortByQuery = req.query.sortBy as string | undefined;
-    const sortOrderQuery = req.query.sortOrder;
-    const searchQuery = (req.query.search ?? "") as string;
-    const statusCode = (req.query.statusCode ?? "") as string;
+    const sortOrderQuery = ((req.query.sortOrder ?? "") as string).trim();
+    const searchQuery = ((req.query.search ?? "") as string).trim();
+    const statusCode = ((req.query.statusCode ?? "") as string).trim();
+    const ideaTags = req.query.tags
+      ? (req.query.tags as string).split(",").map((tag) => tag.trim())
+      : [];
+    const andLogic = req.query.andTags === "true";
+
     const sortOrder = ["ASC", "DESC"].includes(sortOrderQuery as SortOrder)
       ? (sortOrderQuery as SortOrder)
       : "DESC";
@@ -121,12 +126,12 @@ export const getAllIdeas = async (req: Request, res: Response) => {
       ? (sortByQuery as SortOption)
       : "recent";
 
-    const matchedIds = await ideaRepo.getMatchedIdeaIds(
+    const ids = await ideaRepo.getMatchedIdeaIds(
       searchQuery,
-      statusCode
+      ideaTags,
+      statusCode,
+      andLogic
     );
-
-    const ids = matchedIds.map((r) => r.id);
 
     if (ids.length === 0) {
       res.status(200).json([]);

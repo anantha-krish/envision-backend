@@ -23,6 +23,6 @@ router.get("/trending", async (req, res) => {
 router.patch("/:id/status", updateIdeaStatus);
 router.get("/:id", getIdeaDetails);
 
-router.put("/:id", updateIdea); // Update an idea with new tags
+router.put("/:id", updateIdea);
 
 export default router;
