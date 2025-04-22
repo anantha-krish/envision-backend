@@ -52,11 +52,11 @@ export const decrementLikes = async (ideaId: number) => {
 
 export const incrementComments = async (ideaId: number) => {
   if ((await redis.get(`idea_comments:${ideaId}`)) === null) {
-    const [{ like }] = await db
-      .select({ like: count().as("count") })
+    const [{ comment }] = await db
+      .select({ comment: count().as("count") })
       .from(comments)
       .where(eq(comments.ideaId, ideaId));
-    await redis.set(`idea_comments:${ideaId}`, like);
+    await redis.set(`idea_comments:${ideaId}`, comment);
     return;
   }
   await redis.incr(`idea_comments:${ideaId}`);
@@ -86,3 +86,14 @@ export const updateEngagementStats = async (
     REDIS_CACHE_EXPIRY,
     JSON.stringify(engagementStats)
   );
+
+export const mgetStats = async (keys: string[]) => await redis.mget(...keys);
+export const msetStats = async (data: Record<string, number>) =>
+  await redis.mset(data);
+
+export const deleteStaleStats = async (keys: string[]) => redis.del(...keys);
+
+export const getlikeKeysFromRedis = async () =>
+  await redis.keys("idea_likes:*");
+export const getCommentKeysFromRedis = async () =>
+  await redis.keys("idea_comments:*");

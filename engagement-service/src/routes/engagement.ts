@@ -1,14 +1,19 @@
 import { Request, Response, Router } from "express";
 import { db } from "../db/db.connection";
 import { likes, comments } from "../db/schema";
-import { eq, and, sql, inArray, desc } from "drizzle-orm";
+import { eq, and, sql, inArray, desc, count } from "drizzle-orm";
 import { z } from "zod";
 import { sendNewCommentEvent, sendNewLikeEvent } from "../kafka/producer";
 import {
   decrementComments,
   decrementLikes,
+  deleteStaleStats,
+  getCommentKeysFromRedis,
+  getlikeKeysFromRedis,
   incrementComments,
   incrementLikes,
+  mgetStats,
+  msetStats,
 } from "../redis_client";
 
 const router = Router();
@@ -167,6 +172,105 @@ router.delete("/comments/:commentId", async (req: Request, res: Response) => {
   await decrementComments(result[1].ideaId);
 
   res.status(200).json({ message: "Comment deleted" });
+});
+
+router.post("/refresh-redis", async (req, res) => {
+  try {
+    // Fetch valid counts from DB
+    const likeCounts = await db
+      .select({
+        ideaId: likes.ideaId,
+        likeCount: count().as("likeCount"),
+      })
+      .from(likes)
+      .groupBy(likes.ideaId);
+
+    const commentCounts = await db
+      .select({
+        ideaId: comments.ideaId,
+        commentCount: count().as("commentCount"),
+      })
+      .from(comments)
+      .groupBy(comments.ideaId);
+
+    const validIdeaIds = new Set<number>();
+
+    const redisData: Record<string, number> = {};
+    likeCounts.forEach(({ ideaId, likeCount }) => {
+      redisData[`idea_likes:${ideaId}`] = likeCount;
+      validIdeaIds.add(ideaId);
+    });
+    commentCounts.forEach(({ ideaId, commentCount }) => {
+      redisData[`idea_comments:${ideaId}`] = commentCount;
+      validIdeaIds.add(ideaId);
+    });
+
+    // Fetch existing keys from Redis
+    const likeKeys = await getlikeKeysFromRedis();
+    const commentKeys = await getCommentKeysFromRedis();
+
+    const keysToDelete: string[] = [];
+
+    // Check for invalid like keys
+    likeKeys.forEach((key) => {
+      const id = parseInt(key.split(":")[1]);
+      if (!validIdeaIds.has(id)) keysToDelete.push(key);
+    });
+
+    // Check for invalid comment keys
+    commentKeys.forEach((key) => {
+      const id = parseInt(key.split(":")[1]);
+      if (!validIdeaIds.has(id)) keysToDelete.push(key);
+    });
+
+    // Delete stale keys
+    if (keysToDelete.length > 0) {
+      await deleteStaleStats(keysToDelete);
+    }
+
+    // Prepare to get old values for response
+    const allKeys = Array.from(validIdeaIds).flatMap((ideaId) => [
+      `idea_likes:${ideaId}`,
+      `idea_comments:${ideaId}`,
+    ]);
+
+    const oldValues = await mgetStats(allKeys);
+
+    const result: Record<
+      number,
+      {
+        oldLikes: number;
+        newLikes: number;
+        oldComments: number;
+        newComments: number;
+      }
+    > = {};
+    let index = 0;
+
+    for (const ideaId of validIdeaIds) {
+      const oldLikes = oldValues[index++] ?? "0";
+      const oldComments = oldValues[index++] ?? "0";
+
+      result[ideaId] = {
+        oldLikes: parseInt(oldLikes),
+        newLikes: redisData[`idea_likes:${ideaId}`] ?? 0,
+        oldComments: parseInt(oldComments),
+        newComments: redisData[`idea_comments:${ideaId}`] ?? 0,
+      };
+    }
+
+    // Bulk update Redis
+    await msetStats(redisData);
+
+    res.status(200).json({
+      message: "Redis updated successfully",
+      deletedKeys: keysToDelete,
+      details: result,
+    });
+  } catch (error) {
+    console.error("Error refreshing Redis:", error);
+    res.status(500).json({ error: "Failed to refresh Redis" });
+  }
 });
 
 export default router;
