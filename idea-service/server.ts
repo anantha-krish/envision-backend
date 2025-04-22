@@ -19,7 +19,7 @@ const syncEngagementStats = async () => {
   }
 };
 syncEngagementStats();
-setInterval(syncEngagementStats, 5 * 60 * 1000);
+setInterval(syncEngagementStats, 30 * 1000);
 //app.use(cors());
 app.use(express.json());
 

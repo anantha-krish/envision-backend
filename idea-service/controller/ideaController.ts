@@ -5,7 +5,11 @@ import {
   SortOrder,
   validSortOptions,
 } from "../src/repo/ideasRepo";
-import { mgetViews, storeIdeaCreation } from "../src/redis_client";
+import {
+  incrementViews,
+  mgetViews,
+  storeIdeaCreation,
+} from "../src/redis_client";
 import { db } from "../src/db/db.connection";
 import { tags } from "../src/db/schema";
 import { inArray, eq } from "drizzle-orm";
@@ -193,7 +197,13 @@ export const updateIdea = async (req: Request, res: Response) => {
   }
 };
 export const getIdeaDetails = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = Number(req.params.id);
+
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid idea ID" });
+    return;
+  }
+
   try {
     const result = await ideaRepo.getIdeaById(Number(id));
     if (!result) {

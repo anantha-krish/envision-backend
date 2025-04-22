@@ -126,7 +126,7 @@ class IdeaRepository {
       .from(ideaSubmitters)
       .where(eq(ideaSubmitters.ideaId, ideaId));
 
-    incrementViews(ideaId);
+    await incrementViews(ideaId);
 
     return {
       ...ideaResult[0],
@@ -428,7 +428,7 @@ class IdeaRepository {
 
     // Title search condition
     if (searchQuery.length >= 2) {
-      whereConditions.push(like(ideas.title, `%${searchQuery}%`));
+      whereConditions.push(ilike(ideas.title, `%${searchQuery}%`));
     }
 
     // Status filter condition

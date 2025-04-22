@@ -43,6 +43,7 @@ export const getTopIdeas = async (req: Request, res: Response) => {
 
   const finalResults = ideasList.map((idea) => {
     return {
+      ideaId: idea.id,
       title: idea.title,
       likes: idea.likes || 0,
       comments: idea.comments || 0,
