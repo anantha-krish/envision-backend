@@ -84,7 +84,7 @@ export const getTrendingTags = async (req: Request, res: Response) => {
     const endTimestamp = endOfDay(new Date(endDate));
     var result = await db
       .select({
-        tag: tags.name,
+        tagName: tags.name,
         count: count(ideaTags.ideaId).as("count"),
       })
       .from(ideaTags)
