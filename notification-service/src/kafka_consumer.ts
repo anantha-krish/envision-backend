@@ -29,6 +29,10 @@ export const consumeMessages = async () => {
       const data = JSON.parse(message.value?.toString() || "{}");
       const { actorId, ideaId, type, recipients, messageText } = data;
 
+      const validrecipients = recipients.filter(
+        (id): id is number => typeof id === "number" && id > 0
+      );
+
       console.log(`Received: ${JSON.stringify(data)}`);
 
       await db.transaction(async (tx) => {
@@ -67,7 +71,7 @@ export const consumeMessages = async () => {
           aggregatedNotificationId = insertedAggregate[0].id;
         }
 
-        for (const userId of recipients) {
+        for (const userId of validrecipients) {
           // 🛑 Check if the individual notification already exists
           const existingIndividual = await tx
             .select()
@@ -151,7 +155,7 @@ export const consumeMessages = async () => {
       });
 
       await Promise.all(
-        recipients.map(async (userId: number) => {
+        validrecipients.map(async (userId: number) => {
           var _id = userId.toString();
           await updateUnreadCount(_id);
           const count = await getUnreadCount(_id);
