@@ -1,6 +1,10 @@
+### Final Semester Project
+of Anantha Krishnan M (ID: 2023MT93423)
+
+for BITS Pilani University's Mtech in Software Engineering Program
 
 # Envision - Backend Microservices
-
+ 
 Backend for the Envision platform, designed using a **microservices architecture** with **Node.js**, **Express**, and **TypeScript**. Each service is containerized and communicates via **Kafka**.
 
 ## 🧩 Services Overview
