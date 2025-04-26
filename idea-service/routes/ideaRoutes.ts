@@ -20,6 +20,6 @@ router.patch("/:id/status", updateIdeaStatus);
 router.patch("/:id/tags", updateIdeaTags);
 router.get("/:id", getIdeaDetails);
 
-router.put("/:id", updateIdea);
+router.patch("/:id", updateIdea);
 
 export default router;
