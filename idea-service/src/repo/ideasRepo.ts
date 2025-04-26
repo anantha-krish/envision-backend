@@ -139,10 +139,16 @@ class IdeaRepository {
     return db.delete(ideas).where(eq(ideas.id, ideaId));
   }
 
-  async updateIdeaStatus(ideaId: number, statusId: number) {
+  async updateIdeaStatus(ideaId: number, statusName: string) {
+    const [result] = await db
+      .select({ statusId: ideaStatus.id })
+      .from(ideaStatus)
+      .where(eq(ideaStatus.name, statusName))
+      .limit(1);
+
     return db
       .update(ideas)
-      .set({ statusId })
+      .set({ statusId: result.statusId })
       .where(eq(ideas.id, ideaId))
       .returning();
   }
@@ -507,6 +513,16 @@ class IdeaRepository {
       .where(eq(ideaStatus.id, statusId))
       .limit(1);
     return status.name;
+  }
+
+  async getTags(ideaId: number) {
+    const [result] = await db
+      .select()
+      .from(ideaTags)
+      .leftJoin(tags, eq(ideaTags.tagId, tags.id))
+      .where(eq(ideaStatus.id, ideaId))
+      .limit(1);
+    return result.tags;
   }
 
   async getTopIdeas() {}

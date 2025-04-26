@@ -5,11 +5,7 @@ import {
   SortOrder,
   validSortOptions,
 } from "../src/repo/ideasRepo";
-import {
-  incrementViews,
-  mgetViews,
-  storeIdeaCreation,
-} from "../src/redis_client";
+import { incrementViews, mgetViews } from "../src/redis_client";
 import { db } from "../src/db/db.connection";
 import { tags } from "../src/db/schema";
 import { inArray, eq } from "drizzle-orm";
@@ -42,10 +38,6 @@ export const createIdea = async (req: Request, res: Response) => {
       statusId,
       tags || [],
       submittedBy?.length > 0 ? submittedBy : [req.headers.user_id]
-    );
-    await storeIdeaCreation(
-      result.ideaId,
-      result.createdAt?.toDateString() ?? "0"
     );
     res.status(201).json(result);
   } catch (error: any) {
@@ -177,7 +169,7 @@ export const getAllIdeas = async (req: Request, res: Response) => {
 // Update idea
 export const updateIdea = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { title, summary, description, statusId, tags } = req.body;
+  const { title, summary, description } = req.body;
 
   try {
     const result = await ideaRepo.updateIdeaContent(
@@ -222,33 +214,67 @@ export const updateIdeaStatus = async (req: Request, res: Response) => {
     const ideaId = Number(req.params.id ?? "-1");
     const userId = parseInt((req.headers.user_id as string) ?? "-1");
     const recipients = Array.from(
-      new Set([...req.body.recipients, ...(userId > -1 ? [userId] : [])])
+      new Set([
+        ...(Array.isArray(req.body.recipients) ? req.body.recipients : []),
+        ...(userId > -1 ? [userId] : []),
+      ])
     );
-    const { statusId } = req.body;
+    const { statusCode } = req.body;
 
-    if (!ideaId || !statusId) {
-      res.status(400).json({ error: "ideaId and statusId are required" });
+    if (!ideaId || !statusCode) {
+      res.status(400).json({ error: "ideaId and statusCode are required" });
       return;
     }
 
-    const updatedIdea = await ideaRepo.updateIdeaStatus(ideaId, statusId);
+    const updatedIdea = await ideaRepo.updateIdeaStatus(ideaId, statusCode);
 
     if (!updatedIdea) {
       res.status(404).json({ error: "Idea not found" });
       return;
     }
-    const status = await ideaRepo.getStatusName(statusId);
 
     sendStatusUpdate({
       actorId: userId,
       ideaId: ideaId,
       recipients: recipients,
-      messageText: `IDEA-${ideaId} status has been changed to %${status}%`,
+      messageText: `IDEA-${ideaId} status has been changed to %${statusCode}%`,
     });
 
     res.status(200).json({
       message: "Idea status updated successfully",
-      idea: { updatedIdea, status },
+      ideaId: ideaId,
+      statusCode,
+    });
+  } catch (error) {
+    console.error("Error updating idea status:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+    return;
+  }
+};
+
+export const updateIdeaTags = async (req: Request, res: Response) => {
+  try {
+    const ideaId = Number(req.params.id ?? "-1");
+    const userId = parseInt((req.headers.user_id as string) ?? "-1");
+    const { tags } = req.body;
+
+    if (!ideaId || !tags) {
+      res.status(400).json({ error: "ideaId and tags are required" });
+      return;
+    }
+
+    const updatedIdea = await ideaRepo.updateIdeaTags(ideaId, tags);
+
+    const newTags = await ideaRepo.getTags(ideaId);
+
+    if (!updatedIdea) {
+      res.status(404).json({ error: "Idea not found" });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Idea status updated successfully",
+      idea: { updatedIdea },
     });
   } catch (error) {
     console.error("Error updating idea status:", error);

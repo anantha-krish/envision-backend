@@ -47,16 +47,3 @@ export const getCommentedIdeasKeys = async () =>
 
 export const getValue = async (key: string) => await redis.get(key);
 export const delValue = async (key: string[]) => await redis.del(...key);
-export async function storeIdeaCreation(ideaId: number, createdAt: string) {
-  await redis.zadd(
-    "ideas:recent",
-    new Date(createdAt).getTime(),
-    ideaId.toString()
-  );
-}
-export async function getTrendingIdeas() {
-  const cutoffTime = Date.now() - 24 * 60 * 60 * 1000; // Last 24 hours
-  await redis.zremrangebyscore("ideas:trending", 0, cutoffTime); // Remove old entries
-
-  return await redis.zrevrange("ideas:trending_scores", 0, 9, "WITHSCORES"); // Top 10
-}

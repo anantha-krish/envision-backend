@@ -58,6 +58,7 @@ router.get("/:userId?", async (req, res) => {
         type: aggregatedNotifications.type,
         count: aggregatedNotifications.count,
         updatedAt: aggregatedNotifications.updatedAt,
+
         isRead:
           sql<boolean>`COALESCE(${notificationRecipients.isRead}, false)`.as(
             "is_read"
